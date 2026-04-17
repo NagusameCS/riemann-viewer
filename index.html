@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Riemannian Manifold Viewer</title>
+<style>
+:root {
+  --bg: #08080e; --surface: #0e0e18; --border: rgba(100,120,255,0.12);
+  --text: #b8b8c4; --dim: #666; --accent: #6080ff; --accent2: #4060cc;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; min-height: 100vh; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+header {
+  text-align: center; padding: 60px 20px 40px;
+  background: linear-gradient(180deg, rgba(40,50,120,0.12) 0%, transparent 100%);
+}
+header h1 { font-size: 32px; font-weight: 300; color: #d0d0e0; letter-spacing: -0.5px; }
+header h1 span { color: var(--accent); font-weight: 500; }
+header p { color: var(--dim); font-size: 14px; margin-top: 8px; max-width: 520px; margin-inline: auto; line-height: 1.6; }
+
+.models {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px; max-width: 1100px; margin: 0 auto; padding: 0 24px 60px;
+}
+
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 24px; transition: border-color 0.2s, transform 0.2s;
+  display: flex; flex-direction: column;
+}
+.card:hover { border-color: rgba(100,120,255,0.3); transform: translateY(-2px); }
+
+.card .tag { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--dim); margin-bottom: 6px; }
+.card h2 { font-size: 18px; font-weight: 500; color: #d0d0e0; margin-bottom: 4px; }
+.card .arch { font-size: 12px; color: var(--accent2); margin-bottom: 14px; }
+
+.card .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; font-size: 12px; margin-bottom: 16px; }
+.card .stats .label { color: var(--dim); }
+.card .stats .value { color: var(--text); text-align: right; font-variant-numeric: tabular-nums; }
+
+.card .curv-bar {
+  height: 6px; border-radius: 3px; margin: 4px 0 2px;
+  background: linear-gradient(to right, #2244aa, #3366cc, #cc8833, #cc3333);
+}
+.card .curv-labels { display: flex; justify-content: space-between; font-size: 9px; color: var(--dim); margin-bottom: 14px; }
+
+.card .btn-row { margin-top: auto; display: flex; gap: 8px; }
+.card .btn {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 9px 16px; border-radius: 6px; font-size: 12px; font-weight: 500;
+  border: 1px solid var(--border); background: rgba(60,80,200,0.08);
+  color: var(--accent); cursor: pointer; transition: background 0.2s;
+}
+.card .btn:hover { background: rgba(60,80,200,0.18); }
+.card .btn.primary { background: rgba(60,80,200,0.2); border-color: rgba(100,120,255,0.3); }
+
+footer {
+  text-align: center; padding: 30px 20px 40px;
+  border-top: 1px solid var(--border);
+  font-size: 12px; color: var(--dim);
+}
+footer a { color: var(--accent2); }
+
+.drop-hint {
+  text-align: center; padding: 20px; margin: 0 auto 40px;
+  max-width: 500px; font-size: 12px; color: var(--dim);
+  border: 1px dashed rgba(100,120,255,0.15); border-radius: 8px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>Riemannian</span> Manifold Viewer</h1>
+  <p>3D visualization of the geometric structure of neural network weight spaces — scalar curvature, metric tensors, and Christoffel connections computed by <a href="https://github.com/nicholascormier/HyperTensor">Geodessical</a>.</p>
+</header>
+
+<section class="models">
+
+  <div class="card">
+    <div class="tag">135M Parameters</div>
+    <h2>SmolLM2-135M</h2>
+    <div class="arch">LLaMA · d=576 · 30 layers · 9 heads · Q8_0</div>
+    <div class="stats">
+      <span class="label">Cloud points</span><span class="value">64</span>
+      <span class="label">Curvature pts</span><span class="value">64</span>
+      <span class="label">Intrinsic dim</span><span class="value">17</span>
+      <span class="label">Consistency</span><span class="value">92.1%</span>
+      <span class="label">Scalar R range</span><span class="value">[-1083, 0]</span>
+      <span class="label">PCA variance</span><span class="value">95.1%</span>
+    </div>
+    <div class="curv-bar"></div>
+    <div class="curv-labels"><span>R = -1083</span><span>R = 0</span></div>
+    <div class="btn-row">
+      <a href="smol/" class="btn primary">View Manifold →</a>
+      <a href="data/smollm2-135m.json" class="btn" download>JSON ↓</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="tag">3.8B Parameters</div>
+    <h2>Phi-3.5 Mini</h2>
+    <div class="arch">Phi-3 · d=3072 · 32 layers · 32 heads · Q4_0</div>
+    <div class="stats">
+      <span class="label">Cloud points</span><span class="value">64</span>
+      <span class="label">Curvature pts</span><span class="value">44</span>
+      <span class="label">Intrinsic dim</span><span class="value">11</span>
+      <span class="label">Consistency</span><span class="value">95.9%</span>
+      <span class="label">Scalar R range</span><span class="value">[0, 0.004]</span>
+      <span class="label">PCA variance</span><span class="value">95.2%</span>
+    </div>
+    <div class="curv-bar"></div>
+    <div class="curv-labels"><span>R = 0</span><span>R = 0.004</span></div>
+    <div class="btn-row">
+      <a href="phi/" class="btn primary">View Manifold →</a>
+      <a href="data/phi-3.5-mini.json" class="btn" download>JSON ↓</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="tag">2B Parameters</div>
+    <h2>Gemma-4 E2B</h2>
+    <div class="arch">Gemma-4 · d=1536 · 35 layers · 8 heads · Q4_0</div>
+    <div class="stats">
+      <span class="label">Cloud points</span><span class="value">64</span>
+      <span class="label">Curvature pts</span><span class="value">64</span>
+      <span class="label">Intrinsic dim</span><span class="value">25</span>
+      <span class="label">Consistency</span><span class="value">96.1%</span>
+      <span class="label">Scalar R range</span><span class="value">[0, 0]</span>
+      <span class="label">PCA variance</span><span class="value">95.3%</span>
+    </div>
+    <div class="curv-bar"></div>
+    <div class="curv-labels"><span>R = 0</span><span>R = 0 (flat)</span></div>
+    <div class="btn-row">
+      <a href="gemma/" class="btn primary">View Manifold →</a>
+      <a href="data/gemma-4-e2b.json" class="btn" download>JSON ↓</a>
+    </div>
+  </div>
+
+</section>
+
+<div class="drop-hint">
+  Or open the <a href="viewer.html">viewer</a> directly and drop any <code>manifold_export.json</code> to visualize your own model.
+</div>
+
+<footer>
+  Geometry computed by <a href="https://github.com/nicholascormier/HyperTensor">Geodessical / HyperTensor</a> axiom-beta pipeline.
+  Manifold data format: <code>geodessical-manifold-v1</code>
+</footer>
+
+</body>
+</html>

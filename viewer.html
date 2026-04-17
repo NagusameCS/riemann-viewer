@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Riemannian Manifold Viewer</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #08080e; color: #c8c8d0; font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden; }
+#canvas-container { position: fixed; inset: 0; z-index: 0; }
+canvas { display: block; width: 100%; height: 100%; }
+
+.panel {
+  position: fixed; z-index: 10;
+  background: rgba(12, 12, 20, 0.92);
+  border: 1px solid rgba(100, 120, 255, 0.15);
+  border-radius: 8px;
+  backdrop-filter: blur(12px);
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+.panel::-webkit-scrollbar { width: 4px; }
+.panel::-webkit-scrollbar-thumb { background: rgba(100,120,255,0.3); border-radius: 2px; }
+
+#info-panel { top: 16px; left: 16px; width: 280px; }
+#controls-panel { top: 16px; right: 16px; width: 240px; }
+#legend-panel { bottom: 16px; left: 16px; width: 320px; }
+#stats-panel { bottom: 16px; right: 16px; width: 240px; }
+
+.panel h2 { font-size: 14px; font-weight: 600; color: #8090ff; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+.panel h3 { font-size: 12px; font-weight: 600; color: #60a0ff; margin: 10px 0 4px; }
+.panel label { display: flex; align-items: center; gap: 6px; margin: 3px 0; cursor: pointer; font-size: 12px; }
+.panel label input[type="checkbox"] { accent-color: #6080ff; }
+.panel label input[type="range"] { flex: 1; accent-color: #6080ff; }
+
+.model-entry {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px; margin: 4px 0;
+  background: rgba(255,255,255,0.03);
+  border-radius: 4px;
+  border-left: 3px solid;
+}
+.model-entry .swatch { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.model-entry .name { font-weight: 500; flex: 1; font-size: 12px; }
+.model-entry .meta { font-size: 10px; color: #888; }
+.model-entry button {
+  background: none; border: 1px solid rgba(255,80,80,0.4); color: #f88;
+  border-radius: 3px; padding: 1px 6px; font-size: 10px; cursor: pointer;
+}
+.model-entry button:hover { background: rgba(255,80,80,0.15); }
+
+.stat-row { display: flex; justify-content: space-between; font-size: 11px; padding: 1px 0; }
+.stat-row .label { color: #888; }
+.stat-row .value { color: #aab; font-variant-numeric: tabular-nums; }
+
+.color-bar { height: 14px; border-radius: 3px; margin: 4px 0; }
+.color-bar-labels { display: flex; justify-content: space-between; font-size: 10px; color: #666; }
+
+.view-btns { display: flex; gap: 4px; margin: 6px 0; }
+.view-btns button {
+  flex: 1; padding: 5px 8px; font-size: 11px;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(100,120,255,0.2);
+  border-radius: 4px; color: #8090ff; cursor: pointer;
+}
+.view-btns button.active { background: rgba(60,80,200,0.25); border-color: rgba(100,120,255,0.5); }
+.view-btns button:hover { background: rgba(60,80,200,0.15); }
+
+#drop-zone {
+  position: fixed; inset: 0; z-index: 100; display: none;
+  align-items: center; justify-content: center;
+  background: rgba(10, 10, 20, 0.85); backdrop-filter: blur(8px);
+}
+#drop-zone.active { display: flex; }
+#drop-zone .inner {
+  border: 2px dashed rgba(100, 120, 255, 0.5);
+  border-radius: 16px; padding: 60px 80px; text-align: center;
+}
+#drop-zone .inner h2 { font-size: 20px; color: #8090ff; margin-bottom: 8px; }
+#drop-zone .inner p { color: #666; font-size: 13px; }
+
+#loading {
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+#loading .inner { text-align: center; }
+#loading .spinner {
+  width: 32px; height: 32px; border: 2px solid rgba(100,120,255,0.15);
+  border-top-color: #6080ff; border-radius: 50%;
+  animation: spin 0.8s linear infinite; margin: 0 auto 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#loading p { color: #666; font-size: 13px; }
+
+#home-link {
+  position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+  z-index: 20; font-size: 12px; color: #4060cc;
+  background: rgba(12,12,20,0.8); padding: 4px 14px;
+  border-radius: 12px; border: 1px solid rgba(100,120,255,0.12);
+  text-decoration: none;
+}
+#home-link:hover { color: #8090ff; border-color: rgba(100,120,255,0.3); }
+
+#add-model-btn {
+  margin-top: 8px; width: 100%; padding: 6px; font-size: 11px;
+  background: rgba(255,255,255,0.03); border: 1px dashed rgba(100,120,255,0.2);
+  border-radius: 4px; color: #6080ff; cursor: pointer;
+}
+#add-model-btn:hover { background: rgba(60,80,200,0.1); }
+#file-input { display: none; }
+</style>
+</head>
+<body>
+
+<div id="canvas-container"></div>
+
+<a id="home-link" href="./">← All Models</a>
+
+<div id="loading" style="display:none;">
+  <div class="inner">
+    <div class="spinner"></div>
+    <p>Loading manifold data…</p>
+  </div>
+</div>
+
+<div id="drop-zone">
+  <div class="inner">
+    <h2>Drop manifold_export.json</h2>
+    <p>Add another model for comparison</p>
+  </div>
+</div>
+
+<div class="panel" id="info-panel" style="display:none;">
+  <h2>Models</h2>
+  <div id="model-list"></div>
+  <button id="add-model-btn">+ Add Model</button>
+  <input type="file" id="file-input" accept=".json" multiple>
+</div>
+
+<div class="panel" id="controls-panel" style="display:none;">
+  <h2>Display</h2>
+  <h3>View Mode</h3>
+  <div class="view-btns" id="view-mode-btns">
+    <button class="active" data-mode="curvature">Curvature</button>
+    <button data-mode="metric">Metric</button>
+    <button data-mode="cloud">Cloud</button>
+  </div>
+  <h3>Layers</h3>
+  <label><input type="checkbox" id="chk-cloud" checked> PCA Point Cloud</label>
+  <label><input type="checkbox" id="chk-curv" checked> Curvature Field</label>
+  <label><input type="checkbox" id="chk-ellipsoids"> Metric Ellipsoids</label>
+  <label><input type="checkbox" id="chk-connections" checked> Connections</label>
+  <label><input type="checkbox" id="chk-axes" checked> Axes</label>
+  <label><input type="checkbox" id="chk-grid" checked> Grid</label>
+  <h3>Point Size</h3>
+  <label><input type="range" id="rng-size" min="0.5" max="8" step="0.1" value="2.5"> <span id="val-size">2.5</span></label>
+  <h3>Curvature Scale</h3>
+  <label><input type="range" id="rng-curv-scale" min="0" max="2" step="0.01" value="1"> <span id="val-curv-scale">1.0</span></label>
+  <h3>Ellipsoid Scale</h3>
+  <label><input type="range" id="rng-ellipsoid" min="0.05" max="2" step="0.05" value="0.3"> <span id="val-ellipsoid">0.3</span></label>
+  <h3>Opacity</h3>
+  <label><input type="range" id="rng-opacity" min="0.1" max="1" step="0.05" value="0.85"> <span id="val-opacity">0.85</span></label>
+</div>
+
+<div class="panel" id="legend-panel" style="display:none;">
+  <h2>Legend</h2>
+  <div id="legend-content"></div>
+</div>
+
+<div class="panel" id="stats-panel" style="display:none;">
+  <h2>Geometry</h2>
+  <div id="stats-content"></div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* ═══ State ═══ */
+const models = [];
+const MODEL_COLORS = [0x4488ff, 0xff6644, 0x44cc88, 0xccaa44, 0xcc44cc, 0x44cccc, 0xff88aa, 0xaaff44];
+let scene, camera, renderer, controls, axesGroup, gridHelper;
+
+/* ═══ Scene ═══ */
+function initScene() {
+  const container = document.getElementById('canvas-container');
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x08080e);
+  scene.fog = new THREE.FogExp2(0x08080e, 0.012);
+
+  camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 500);
+  camera.position.set(12, 8, 12);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.2;
+  container.appendChild(renderer.domElement);
+
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.minDistance = 2;
+  controls.maxDistance = 100;
+
+  scene.add(new THREE.AmbientLight(0x303050, 1.5));
+  const d1 = new THREE.DirectionalLight(0x8888ff, 1.0); d1.position.set(10, 15, 10); scene.add(d1);
+  const d2 = new THREE.DirectionalLight(0xff8866, 0.5); d2.position.set(-10, 5, -10); scene.add(d2);
+  const pl = new THREE.PointLight(0x4466ff, 0.5, 50); pl.position.set(0, 10, 0); scene.add(pl);
+
+  gridHelper = new THREE.GridHelper(30, 30, 0x1a1a2e, 0x111122);
+  gridHelper.position.y = -0.01;
+  scene.add(gridHelper);
+
+  axesGroup = new THREE.Group();
+  const axColors = [0xff4444, 0x44ff44, 0x4444ff];
+  for (let i = 0; i < 3; i++) {
+    const dir = new THREE.Vector3(); dir.setComponent(i, 1);
+    axesGroup.add(new THREE.ArrowHelper(dir, new THREE.Vector3(), 8, axColors[i], 0.3, 0.15));
+  }
+  scene.add(axesGroup);
+
+  addEventListener('resize', () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+}
+
+function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
+
+/* ═══ Color ═══ */
+function curvColor(R, rMin, rMax) {
+  const range = Math.max(Math.abs(rMin), Math.abs(rMax), 1e-6);
+  const t = Math.min(Math.abs(R) / range, 1);
+  return R < 0
+    ? new THREE.Color().setHSL(0.55 + 0.1 * (1 - t), 0.8, 0.3 + 0.5 * t)
+    : new THREE.Color().setHSL(0.08 - 0.08 * t, 0.9, 0.3 + 0.4 * t);
+}
+
+/* ═══ Add model ═══ */
+function addModel(data, colorIdx) {
+  const color = MODEL_COLORS[colorIdx % MODEL_COLORS.length];
+  const group = new THREE.Group();
+  const cloud = data.manifold?.cloud || [];
+  const curvPts = data.curvature?.points || [];
+  const allPts = [...cloud, ...curvPts.map(p => p.pos)];
+
+  let cx = 0, cy = 0, cz = 0;
+  for (const p of allPts) { cx += p[0]; cy += p[1]; cz += p[2]; }
+  if (allPts.length) { cx /= allPts.length; cy /= allPts.length; cz /= allPts.length; }
+
+  let rMin = 0, rMax = 0;
+  for (const p of curvPts) { if (p.R < rMin) rMin = p.R; if (p.R > rMax) rMax = p.R; }
+
+  // PCA cloud
+  const cloudGroup = new THREE.Group();
+  cloudGroup.userData.layer = 'cloud';
+  if (cloud.length) {
+    const geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(cloud.length * 3);
+    const col = new Float32Array(cloud.length * 3);
+    const bc = new THREE.Color(color);
+    for (let i = 0; i < cloud.length; i++) {
+      pos[i*3] = cloud[i][0]-cx; pos[i*3+1] = cloud[i][1]-cy; pos[i*3+2] = cloud[i][2]-cz;
+      col[i*3] = bc.r*0.5; col[i*3+1] = bc.g*0.5; col[i*3+2] = bc.b*0.5;
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    cloudGroup.add(new THREE.Points(geo, new THREE.PointsMaterial({
+      size: 0.15, vertexColors: true, transparent: true, opacity: 0.4, sizeAttenuation: true, depthWrite: false
+    })));
+  }
+  group.add(cloudGroup);
+
+  // Curvature field
+  const curvGroup = new THREE.Group();
+  curvGroup.userData.layer = 'curvature';
+  if (curvPts.length) {
+    const sGeo = new THREE.SphereGeometry(1, 12, 8);
+    const mesh = new THREE.InstancedMesh(sGeo,
+      new THREE.MeshPhongMaterial({ transparent: true, opacity: 0.85, shininess: 40 }),
+      curvPts.length);
+    const dummy = new THREE.Object3D();
+    const maxNorm = Math.max(...curvPts.map(p => p.christoffel_norm || 0), 1);
+    for (let i = 0; i < curvPts.length; i++) {
+      const p = curvPts[i];
+      dummy.position.set(p.pos[0]-cx, p.pos[1]-cy, p.pos[2]-cz);
+      dummy.scale.setScalar(0.08 + 0.12 * ((p.christoffel_norm||0) / maxNorm));
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i, dummy.matrix);
+      mesh.setColorAt(i, curvColor(p.R, rMin, rMax));
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.instanceColor.needsUpdate = true;
+    curvGroup.add(mesh);
+  }
+  group.add(curvGroup);
+
+  // Metric ellipsoids
+  const ellGroup = new THREE.Group();
+  ellGroup.userData.layer = 'ellipsoids';
+  ellGroup.visible = false;
+  if (curvPts.length) {
+    const eGeo = new THREE.SphereGeometry(1, 16, 12);
+    const eMat = new THREE.MeshPhongMaterial({ color, transparent: true, opacity: 0.2, wireframe: true, depthWrite: false });
+    for (const p of curvPts) {
+      if (!p.g_diag || p.g_diag.every(v => v === 0)) continue;
+      const ell = new THREE.Mesh(eGeo, eMat);
+      ell.position.set(p.pos[0]-cx, p.pos[1]-cy, p.pos[2]-cz);
+      const s = 0.3, gd = p.g_diag;
+      ell.scale.set(s*Math.sqrt(Math.abs(gd[0])+0.01), s*Math.sqrt(Math.abs(gd[1])+0.01), s*Math.sqrt(Math.abs(gd[2])+0.01));
+      ell.userData.gDiag = gd;
+      ellGroup.add(ell);
+    }
+  }
+  group.add(ellGroup);
+
+  // Connections
+  const lineGroup = new THREE.Group();
+  lineGroup.userData.layer = 'connections';
+  if (curvPts.length > 2) {
+    const lPos = [], lCol = [];
+    const pts3 = curvPts.map(p => new THREE.Vector3(p.pos[0]-cx, p.pos[1]-cy, p.pos[2]-cz));
+    for (let i = 0; i < pts3.length; i++) {
+      const dists = pts3.map((p, j) => ({ j, d: i===j ? Infinity : pts3[i].distanceTo(p) })).sort((a,b) => a.d-b.d);
+      const c1 = curvColor(curvPts[i].R, rMin, rMax);
+      for (let k = 0; k < Math.min(2, dists.length); k++) {
+        const j = dists[k].j;
+        const c2 = curvColor(curvPts[j].R, rMin, rMax);
+        lPos.push(pts3[i].x, pts3[i].y, pts3[i].z, pts3[j].x, pts3[j].y, pts3[j].z);
+        lCol.push(c1.r, c1.g, c1.b, c2.r, c2.g, c2.b);
+      }
+    }
+    const lGeo = new THREE.BufferGeometry();
+    lGeo.setAttribute('position', new THREE.Float32BufferAttribute(lPos, 3));
+    lGeo.setAttribute('color', new THREE.Float32BufferAttribute(lCol, 3));
+    lineGroup.add(new THREE.LineSegments(lGeo, new THREE.LineBasicMaterial({
+      vertexColors: true, transparent: true, opacity: 0.15, depthWrite: false
+    })));
+  }
+  group.add(lineGroup);
+
+  scene.add(group);
+  const entry = { data, group, cloudGroup, curvGroup, ellGroup, lineGroup, color, rMin, rMax, center: {x:cx,y:cy,z:cz} };
+  models.push(entry);
+  fitCamera();
+  return entry;
+}
+
+function fitCamera() {
+  if (!models.length) return;
+  const box = new THREE.Box3();
+  for (const m of models) box.expandByObject(m.group);
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const d = Math.max(size.x, size.y, size.z, 1);
+  controls.target.copy(center);
+  camera.position.set(center.x + d*1.2, center.y + d*0.8, center.z + d*1.2);
+  controls.update();
+}
+
+function removeModel(i) {
+  if (i < 0 || i >= models.length) return;
+  const m = models[i];
+  scene.remove(m.group);
+  m.group.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.dispose()); });
+  models.splice(i, 1);
+  updateUI();
+}
+
+/* ═══ UI ═══ */
+function showPanels(show) {
+  for (const id of ['info-panel','controls-panel','legend-panel','stats-panel'])
+    document.getElementById(id).style.display = show ? 'block' : 'none';
+}
+
+function updateUI() {
+  const list = document.getElementById('model-list');
+  list.innerHTML = '';
+  for (let i = 0; i < models.length; i++) {
+    const m = models[i], meta = m.data.model || {};
+    const hex = '#' + m.color.toString(16).padStart(6, '0');
+    const e = document.createElement('div');
+    e.className = 'model-entry';
+    e.style.borderLeftColor = hex;
+    e.innerHTML = `<div class="swatch" style="background:${hex}"></div>
+      <div style="flex:1">
+        <div class="name">${meta.name || 'Model '+(i+1)}</div>
+        <div class="meta">${meta.arch||'?'} · d=${meta.dim||'?'} · L=${meta.layers||'?'} · ${meta.quant||'?'}</div>
+      </div>`;
+    const btn = document.createElement('button');
+    btn.textContent = '✕'; btn.onclick = () => removeModel(i);
+    e.appendChild(btn);
+    list.appendChild(e);
+  }
+  updateLegend();
+  updateStats();
+}
+
+function updateLegend() {
+  const el = document.getElementById('legend-content');
+  if (!models.length) { el.innerHTML = ''; return; }
+  let gMin = 0, gMax = 0;
+  for (const m of models) { if (m.rMin < gMin) gMin = m.rMin; if (m.rMax > gMax) gMax = m.rMax; }
+  el.innerHTML = `
+    <h3>Scalar Curvature (R)</h3>
+    <div class="color-bar" style="background:linear-gradient(to right,hsl(234,80%,60%),hsl(200,60%,50%),hsl(40,70%,50%),hsl(0,80%,50%))"></div>
+    <div class="color-bar-labels"><span>${gMin.toFixed(2)}</span><span>0</span><span>${gMax.toFixed(4)}</span></div>
+    <h3 style="margin-top:10px">Point Size</h3>
+    <p style="font-size:11px;color:#666">Scaled by Christoffel connection norm ‖Γ‖</p>
+    <h3 style="margin-top:10px">Ellipsoids</h3>
+    <p style="font-size:11px;color:#666">Axes = √g<sub>ii</sub> (metric tensor diagonal)</p>`;
+}
+
+function updateStats() {
+  const el = document.getElementById('stats-content');
+  if (!models.length) { el.innerHTML = ''; return; }
+  let html = '';
+  for (let i = 0; i < models.length; i++) {
+    const m = models[i], d = m.data, meta = d.model||{}, curv = d.curvature||{}, man = d.manifold||{};
+    const hex = '#' + m.color.toString(16).padStart(6, '0');
+    html += `<h3 style="color:${hex}">${meta.name||'Model '+(i+1)}</h3>`;
+    const sr = (l,v) => `<div class="stat-row"><span class="label">${l}</span><span class="value">${v}</span></div>`;
+    html += sr('Intrinsic dim', man.intrinsic_dim ?? '—');
+    html += sr('PCA components', man.pca_components ?? '—');
+    html += sr('Cloud points', man.cloud?.length || 0);
+    html += sr('Curvature pts', curv.points?.length || 0);
+    html += sr('Mean R', (curv.mean_scalar_curvature ?? 0).toExponential(3));
+    html += sr('Max |R|', Math.max(Math.abs(m.rMin), Math.abs(m.rMax)).toExponential(3));
+    html += sr('‖Γ‖ max', Math.max(...(curv.points||[]).map(p => p.christoffel_norm||0)).toFixed(2));
+    if (d.axioms) {
+      html += sr('Axioms', d.axioms.n_axioms ?? '—');
+      html += sr('Consistency', ((d.axioms.consistency_score??0)*100).toFixed(1)+'%');
+    }
+  }
+  el.innerHTML = html;
+}
+
+/* ═══ Controls ═══ */
+function bindControls() {
+  const layers = { 'chk-cloud':'cloud', 'chk-curv':'curvature', 'chk-ellipsoids':'ellipsoids', 'chk-connections':'connections' };
+  for (const [id, layer] of Object.entries(layers)) {
+    document.getElementById(id).addEventListener('change', e => {
+      for (const m of models) {
+        const g = layer==='cloud'?m.cloudGroup : layer==='curvature'?m.curvGroup : layer==='ellipsoids'?m.ellGroup : m.lineGroup;
+        if (g) g.visible = e.target.checked;
+      }
+    });
+  }
+  document.getElementById('chk-axes').addEventListener('change', e => axesGroup.visible = e.target.checked);
+  document.getElementById('chk-grid').addEventListener('change', e => gridHelper.visible = e.target.checked);
+
+  const sliders = {
+    'rng-size': { disp: 'val-size', fn: v => {
+      for (const m of models) {
+        m.cloudGroup.traverse(o => { if (o.material?.size !== undefined) o.material.size = v*0.06; });
+        m.curvGroup.traverse(o => {
+          if (!o.isInstancedMesh) return;
+          const pts = m.data.curvature?.points||[], maxN = Math.max(...pts.map(p=>p.christoffel_norm||0),1), d = new THREE.Object3D();
+          for (let i = 0; i < pts.length; i++) {
+            const p = pts[i]; d.position.set(p.pos[0]-m.center.x, p.pos[1]-m.center.y, p.pos[2]-m.center.z);
+            d.scale.setScalar((0.08+0.12*((p.christoffel_norm||0)/maxN))*(v/2.5));
+            d.updateMatrix(); o.setMatrixAt(i, d.matrix);
+          }
+          o.instanceMatrix.needsUpdate = true;
+        });
+      }
+    }},
+    'rng-curv-scale': { disp: 'val-curv-scale', fn: v => {
+      for (const m of models) m.curvGroup.traverse(o => {
+        if (!o.isInstancedMesh) return;
+        const pts = m.data.curvature?.points||[];
+        for (let i = 0; i < pts.length; i++) o.setColorAt(i, curvColor(pts[i].R*v, m.rMin*v, m.rMax*v));
+        if (o.instanceColor) o.instanceColor.needsUpdate = true;
+      });
+    }},
+    'rng-ellipsoid': { disp: 'val-ellipsoid', fn: v => {
+      for (const m of models) m.ellGroup.traverse(o => {
+        if (o.isMesh && o.userData.gDiag) {
+          const g = o.userData.gDiag;
+          o.scale.set(v*Math.sqrt(Math.abs(g[0])+0.01), v*Math.sqrt(Math.abs(g[1])+0.01), v*Math.sqrt(Math.abs(g[2])+0.01));
+        }
+      });
+    }},
+    'rng-opacity': { disp: 'val-opacity', fn: v => {
+      for (const m of models) m.curvGroup.traverse(o => { if (o.material) o.material.opacity = v; });
+    }},
+  };
+  for (const [id, cfg] of Object.entries(sliders)) {
+    const el = document.getElementById(id);
+    el.addEventListener('input', () => { const v = parseFloat(el.value); document.getElementById(cfg.disp).textContent = v.toFixed(1); cfg.fn(v); });
+  }
+
+  document.getElementById('view-mode-btns').addEventListener('click', e => {
+    if (!e.target.matches('button')) return;
+    document.querySelectorAll('#view-mode-btns button').forEach(b => b.classList.remove('active'));
+    e.target.classList.add('active');
+    const mode = e.target.dataset.mode;
+    const chks = { cloud: document.getElementById('chk-cloud'), curv: document.getElementById('chk-curv'), ell: document.getElementById('chk-ellipsoids') };
+    if (mode==='curvature') { chks.cloud.checked=true; chks.curv.checked=true; chks.ell.checked=false; }
+    else if (mode==='metric') { chks.cloud.checked=false; chks.curv.checked=true; chks.ell.checked=true; }
+    else { chks.cloud.checked=true; chks.curv.checked=false; chks.ell.checked=false; }
+    Object.values(chks).forEach(c => c.dispatchEvent(new Event('change')));
+  });
+
+  document.getElementById('add-model-btn').addEventListener('click', () => document.getElementById('file-input').click());
+}
+
+/* ═══ Tooltip ═══ */
+function initTooltip() {
+  const tip = document.createElement('div');
+  tip.style.cssText = 'position:fixed;z-index:200;display:none;background:rgba(10,10,20,0.95);border:1px solid rgba(100,120,255,0.3);border-radius:6px;padding:8px 12px;font-size:11px;color:#c8c8d0;pointer-events:none;max-width:250px;line-height:1.5;font-family:inherit';
+  document.body.appendChild(tip);
+  const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+
+  renderer.domElement.addEventListener('mousemove', e => {
+    mouse.x = (e.clientX/innerWidth)*2-1; mouse.y = -(e.clientY/innerHeight)*2+1;
+    ray.setFromCamera(mouse, camera);
+    let found = false;
+    for (const m of models) {
+      m.curvGroup.traverse(o => {
+        if (!o.isInstancedMesh || found) return;
+        const hits = ray.intersectObject(o);
+        if (hits.length) {
+          const idx = hits[0].instanceId, pts = m.data.curvature?.points||[];
+          if (idx < pts.length) {
+            const p = pts[idx];
+            tip.innerHTML = `<strong style="color:#8090ff">${m.data.model?.name||'Model'}</strong><br>Point ${idx}<br>R = ${p.R.toExponential(4)}<br>‖Γ‖ = ${(p.christoffel_norm||0).toFixed(4)}<br>g = [${(p.g_diag||[]).map(v=>v.toFixed(3)).join(', ')}]<br>pos = (${p.pos.map(v=>v.toFixed(3)).join(', ')})`;
+            tip.style.display = 'block'; tip.style.left = (e.clientX+16)+'px'; tip.style.top = (e.clientY+16)+'px';
+            found = true;
+          }
+        }
+      });
+    }
+    if (!found) tip.style.display = 'none';
+  });
+}
+
+/* ═══ File handling ═══ */
+function loadJSON(data) {
+  addModel(data, models.length);
+  showPanels(true);
+  document.getElementById('loading').style.display = 'none';
+  updateUI();
+}
+
+function handleFiles(files) {
+  for (const f of files) {
+    if (!f.name.endsWith('.json')) continue;
+    const r = new FileReader();
+    r.onload = e => { try { loadJSON(JSON.parse(e.target.result)); } catch(err) { console.error('Parse error:', f.name, err); } };
+    r.readAsText(f);
+  }
+}
+
+async function fetchModel(url) {
+  document.getElementById('loading').style.display = 'flex';
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(res.status);
+    loadJSON(await res.json());
+  } catch (err) {
+    console.error('Failed to load:', url, err);
+    document.getElementById('loading').style.display = 'none';
+  }
+}
+
+/* ═══ Drag & Drop ═══ */
+function initDragDrop() {
+  const dz = document.getElementById('drop-zone');
+  let dc = 0;
+  document.addEventListener('dragenter', e => { e.preventDefault(); dc++; dz.classList.add('active'); });
+  document.addEventListener('dragleave', e => { e.preventDefault(); dc--; if (dc<=0) { dz.classList.remove('active'); dc=0; } });
+  document.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+  document.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('active'); dc=0; handleFiles(e.dataTransfer.files); });
+  document.getElementById('file-input').addEventListener('change', e => handleFiles(e.target.files));
+}
+
+/* ═══ Init ═══ */
+initScene();
+bindControls();
+initDragDrop();
+initTooltip();
+animate();
+
+// Auto-load from query param ?m=slug or from hash
+const params = new URLSearchParams(location.search);
+const modelSlug = params.get('m');
+if (modelSlug) {
+  // Resolve data path relative to viewer location
+  const base = document.baseURI.replace(/\/[^/]*$/, '/');
+  fetchModel(base + 'data/' + modelSlug + '.json');
+} else {
+  showPanels(false);
+}
+</script>
+</body>
+</html>
