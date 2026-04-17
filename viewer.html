@@ -144,15 +144,18 @@ canvas { display: block; width: 100%; height: 100%; }
   <h2>Display</h2>
   <h3>View Mode</h3>
   <div class="view-btns" id="view-mode-btns">
-    <button class="active" data-mode="curvature">Curvature</button>
+    <button class="active" data-mode="surface">Surface</button>
+    <button data-mode="curvature">Curvature</button>
     <button data-mode="metric">Metric</button>
     <button data-mode="cloud">Cloud</button>
   </div>
   <h3>Layers</h3>
-  <label><input type="checkbox" id="chk-cloud" checked> PCA Point Cloud</label>
-  <label><input type="checkbox" id="chk-curv" checked> Curvature Field</label>
+  <label><input type="checkbox" id="chk-cloud"> PCA Point Cloud</label>
+  <label><input type="checkbox" id="chk-curv"> Curvature Field</label>
   <label><input type="checkbox" id="chk-ellipsoids"> Metric Ellipsoids</label>
-  <label><input type="checkbox" id="chk-connections" checked> Connections</label>
+  <label><input type="checkbox" id="chk-surface" checked> Manifold Surface</label>
+  <label><input type="checkbox" id="chk-wireframe"> Surface Wireframe</label>
+  <label><input type="checkbox" id="chk-connections"> Connections</label>
   <label><input type="checkbox" id="chk-axes" checked> Axes</label>
   <label><input type="checkbox" id="chk-grid" checked> Grid</label>
   <h3>Point Size</h3>
@@ -187,6 +190,207 @@ canvas { display: block; width: 100%; height: 100%; }
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* ═══ Delaunay triangulation (Delaunator port — minimal inline) ═══ */
+/* Based on https://github.com/mapbox/delaunator (ISC license) */
+function delaunay2D(coords) {
+  // coords: flat [x0,y0, x1,y1, ...]
+  const n = coords.length >> 1;
+  if (n < 3) return [];
+
+  const ids = new Uint32Array(n);
+  const dists = new Float64Array(n);
+
+  // Find bounding box center
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (let i = 0; i < n; i++) {
+    const x = coords[2*i], y = coords[2*i+1];
+    if (x < minX) minX = x; if (y < minY) minY = y;
+    if (x > maxX) maxX = x; if (y > maxY) maxY = y;
+  }
+  const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+
+  // Find seed triangle: closest to center, then smallest circumcircle
+  let i0 = 0, i1 = 0, i2 = 0, minDist = Infinity;
+  for (let i = 0; i < n; i++) {
+    const d = (coords[2*i]-cx)**2 + (coords[2*i+1]-cy)**2;
+    if (d < minDist) { i0 = i; minDist = d; }
+  }
+  const i0x = coords[2*i0], i0y = coords[2*i0+1];
+  minDist = Infinity;
+  for (let i = 0; i < n; i++) {
+    if (i === i0) continue;
+    const d = (coords[2*i]-i0x)**2 + (coords[2*i+1]-i0y)**2;
+    if (d < minDist && d > 0) { i1 = i; minDist = d; }
+  }
+  let i1x = coords[2*i1], i1y = coords[2*i1+1];
+  let minRadius = Infinity;
+  for (let i = 0; i < n; i++) {
+    if (i === i0 || i === i1) continue;
+    const r = circumradius(i0x, i0y, i1x, i1y, coords[2*i], coords[2*i+1]);
+    if (r < minRadius) { i2 = i; minRadius = r; }
+  }
+  if (minRadius === Infinity) return []; // collinear
+
+  let i2x = coords[2*i2], i2y = coords[2*i2+1];
+  // Ensure CCW
+  if (orient(i0x,i0y,i1x,i1y,i2x,i2y) < 0) {
+    const tmp = i1; i1 = i2; i2 = tmp;
+    const tx = i1x; i1x = i2x; i2x = tx;
+    const ty = i1y; i1y = i2y; i2y = ty;
+  }
+  const center = circumcenter(i0x,i0y,i1x,i1y,i2x,i2y);
+
+  for (let i = 0; i < n; i++) dists[i] = (coords[2*i]-center.x)**2 + (coords[2*i+1]-center.y)**2;
+  quicksortIds(ids, dists, 0, n-1);
+
+  // Build hull and triangles using simple incremental insertion
+  const triangles = [];
+  const hull = [i0, i1, i2];
+  triangles.push(i0, i1, i2);
+
+  for (let k = 0; k < n; k++) {
+    const i = ids[k];
+    if (i === i0 || i === i1 || i === i2) continue;
+    const px = coords[2*i], py = coords[2*i+1];
+
+    // Find visible hull edges
+    let start = -1;
+    for (let j = 0; j < hull.length; j++) {
+      const a = hull[j], b = hull[(j+1) % hull.length];
+      if (orient(coords[2*a], coords[2*a+1], coords[2*b], coords[2*b+1], px, py) < 0) {
+        if (start === -1) start = j;
+      }
+    }
+    if (start === -1) continue; // inside hull
+
+    // Walk visible edges
+    const visible = [];
+    for (let j = 0; j < hull.length; j++) {
+      const idx = (start + j) % hull.length;
+      const a = hull[idx], b = hull[(idx+1) % hull.length];
+      if (orient(coords[2*a], coords[2*a+1], coords[2*b], coords[2*b+1], px, py) < 0) {
+        visible.push(idx);
+      } else if (visible.length > 0) break;
+    }
+    if (!visible.length) continue;
+
+    for (const vi of visible) {
+      const a = hull[vi], b = hull[(vi+1) % hull.length];
+      triangles.push(i, a, b);
+    }
+
+    // Update hull
+    const first = visible[0];
+    const count = visible.length;
+    hull.splice(first + 1, count - 1 >= 0 ? count - 1 : 0);
+    hull.splice(first + 1, 0, i);
+  }
+  return triangles;
+}
+
+function orient(ax,ay,bx,by,cx,cy) { return (bx-ax)*(cy-ay)-(by-ay)*(cx-ax); }
+function circumradius(ax,ay,bx,by,cx,cy) {
+  const dx=bx-ax, dy=by-ay, ex=cx-ax, ey=cy-ay;
+  const bl=dx*dx+dy*dy, cl=ex*ex+ey*ey, d=2*(dx*ey-dy*ex);
+  if (Math.abs(d) < 1e-10) return Infinity;
+  const x=(ey*bl-dy*cl)/d, y=(dx*cl-ex*bl)/d;
+  return x*x+y*y;
+}
+function circumcenter(ax,ay,bx,by,cx,cy) {
+  const dx=bx-ax, dy=by-ay, ex=cx-ax, ey=cy-ay;
+  const bl=dx*dx+dy*dy, cl=ex*ex+ey*ey, d=2*(dx*ey-dy*ex);
+  return { x: ax+(ey*bl-dy*cl)/d, y: ay+(dx*cl-ex*bl)/d };
+}
+function quicksortIds(ids, dists, left, right) {
+  for (let i = 0; i < ids.length; i++) ids[i] = i;
+  ids.sort((a,b) => dists[a]-dists[b]);
+}
+
+/* Build surface mesh from curvature points via Delaunay */
+function buildSurface(curvPts, cx, cy, cz, rMin, rMax, modelColor) {
+  if (curvPts.length < 3) return null;
+  const pts = curvPts.map(p => [p.pos[0]-cx, p.pos[1]-cy, p.pos[2]-cz]);
+
+  // Pick 2 axes with greatest spread for triangulation projection
+  const spreads = [0,1,2].map(ax => {
+    const vals = pts.map(p => p[ax]);
+    return Math.max(...vals) - Math.min(...vals);
+  });
+  const axes = [0,1,2].sort((a,b) => spreads[b]-spreads[a]);
+  const a0 = axes[0], a1 = axes[1]; // 2 axes with most spread
+
+  // Flatten to 2D for Delaunay
+  const coords2d = new Float64Array(pts.length * 2);
+  for (let i = 0; i < pts.length; i++) {
+    coords2d[i*2]   = pts[i][a0];
+    coords2d[i*2+1] = pts[i][a1];
+  }
+
+  const triIndices = delaunay2D(coords2d);
+  if (triIndices.length < 3) return null;
+
+  // Filter out overly long triangles (alpha shape — remove triangles with edges > median * 3)
+  const edgeLens = [];
+  for (let i = 0; i < triIndices.length; i += 3) {
+    const i0 = triIndices[i], i1 = triIndices[i+1], i2 = triIndices[i+2];
+    for (const [a,b] of [[i0,i1],[i1,i2],[i2,i0]]) {
+      const dx=pts[a][0]-pts[b][0], dy=pts[a][1]-pts[b][1], dz=pts[a][2]-pts[b][2];
+      edgeLens.push(Math.sqrt(dx*dx+dy*dy+dz*dz));
+    }
+  }
+  edgeLens.sort((a,b) => a-b);
+  const medianEdge = edgeLens[Math.floor(edgeLens.length/2)];
+  const maxEdge = medianEdge * 3.5;
+
+  const filteredTris = [];
+  for (let i = 0; i < triIndices.length; i += 3) {
+    const i0 = triIndices[i], i1 = triIndices[i+1], i2 = triIndices[i+2];
+    let ok = true;
+    for (const [a,b] of [[i0,i1],[i1,i2],[i2,i0]]) {
+      const dx=pts[a][0]-pts[b][0], dy=pts[a][1]-pts[b][1], dz=pts[a][2]-pts[b][2];
+      if (Math.sqrt(dx*dx+dy*dy+dz*dz) > maxEdge) { ok = false; break; }
+    }
+    if (ok) filteredTris.push(i0, i1, i2);
+  }
+  if (filteredTris.length < 3) return null;
+
+  // Build geometry
+  const geo = new THREE.BufferGeometry();
+  const positions = new Float32Array(pts.length * 3);
+  const colors = new Float32Array(pts.length * 3);
+  const normals = new Float32Array(pts.length * 3);
+
+  for (let i = 0; i < pts.length; i++) {
+    positions[i*3] = pts[i][0]; positions[i*3+1] = pts[i][1]; positions[i*3+2] = pts[i][2];
+    const c = curvColor(curvPts[i].R, rMin, rMax);
+    colors[i*3] = c.r; colors[i*3+1] = c.g; colors[i*3+2] = c.b;
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geo.setIndex(filteredTris);
+  geo.computeVertexNormals();
+
+  const surfaceGroup = new THREE.Group();
+  surfaceGroup.userData.layer = 'surface';
+
+  // Filled surface
+  const surfMat = new THREE.MeshPhongMaterial({
+    vertexColors: true, transparent: true, opacity: 0.55,
+    side: THREE.DoubleSide, shininess: 60, depthWrite: false,
+  });
+  surfaceGroup.add(new THREE.Mesh(geo, surfMat));
+
+  // Wireframe overlay
+  const wireMat = new THREE.MeshBasicMaterial({
+    color: modelColor, wireframe: true, transparent: true, opacity: 0.12, depthWrite: false,
+  });
+  const wireMesh = new THREE.Mesh(geo, wireMat);
+  wireMesh.userData.isWireframe = true;
+  surfaceGroup.add(wireMesh);", "oldString": "  wireMesh.userData.isWireframe = true;\n  wireMesh.visible = false;\n  surfaceGroup.add(wireMesh);
+
+  return surfaceGroup;
+}
 
 /* ═══ State ═══ */
 const models = [];
@@ -284,11 +488,13 @@ function addModel(data, colorIdx) {
       size: 0.15, vertexColors: true, transparent: true, opacity: 0.4, sizeAttenuation: true, depthWrite: false
     })));
   }
+  cloudGroup.visible = false;
   group.add(cloudGroup);
 
   // Curvature field
   const curvGroup = new THREE.Group();
   curvGroup.userData.layer = 'curvature';
+  curvGroup.visible = false;
   if (curvPts.length) {
     const sGeo = new THREE.SphereGeometry(1, 12, 8);
     const mesh = new THREE.InstancedMesh(sGeo,
@@ -332,6 +538,7 @@ function addModel(data, colorIdx) {
   // Connections
   const lineGroup = new THREE.Group();
   lineGroup.userData.layer = 'connections';
+  lineGroup.visible = false;
   if (curvPts.length > 2) {
     const lPos = [], lCol = [];
     const pts3 = curvPts.map(p => new THREE.Vector3(p.pos[0]-cx, p.pos[1]-cy, p.pos[2]-cz));
@@ -354,8 +561,12 @@ function addModel(data, colorIdx) {
   }
   group.add(lineGroup);
 
+  // Manifold surface
+  const surfGroup = buildSurface(curvPts, cx, cy, cz, rMin, rMax, color);
+  if (surfGroup) group.add(surfGroup);
+
   scene.add(group);
-  const entry = { data, group, cloudGroup, curvGroup, ellGroup, lineGroup, color, rMin, rMax, center: {x:cx,y:cy,z:cz} };
+  const entry = { data, group, cloudGroup, curvGroup, ellGroup, lineGroup, surfGroup, color, rMin, rMax, center: {x:cx,y:cy,z:cz} };
   models.push(entry);
   fitCamera();
   return entry;
@@ -452,15 +663,21 @@ function updateStats() {
 
 /* ═══ Controls ═══ */
 function bindControls() {
-  const layers = { 'chk-cloud':'cloud', 'chk-curv':'curvature', 'chk-ellipsoids':'ellipsoids', 'chk-connections':'connections' };
+  const layers = { 'chk-cloud':'cloud', 'chk-curv':'curvature', 'chk-ellipsoids':'ellipsoids', 'chk-connections':'connections', 'chk-surface':'surface' };
   for (const [id, layer] of Object.entries(layers)) {
     document.getElementById(id).addEventListener('change', e => {
       for (const m of models) {
-        const g = layer==='cloud'?m.cloudGroup : layer==='curvature'?m.curvGroup : layer==='ellipsoids'?m.ellGroup : m.lineGroup;
+        const g = layer==='cloud'?m.cloudGroup : layer==='curvature'?m.curvGroup : layer==='ellipsoids'?m.ellGroup : layer==='surface'?m.surfGroup : m.lineGroup;
         if (g) g.visible = e.target.checked;
       }
     });
   }
+  document.getElementById('chk-wireframe').addEventListener('change', e => {
+    for (const m of models) {
+      if (!m.surfGroup) return;
+      m.surfGroup.traverse(o => { if (o.userData.isWireframe) o.visible = e.target.checked; });
+    }
+  });
   document.getElementById('chk-axes').addEventListener('change', e => axesGroup.visible = e.target.checked);
   document.getElementById('chk-grid').addEventListener('change', e => gridHelper.visible = e.target.checked);
 
@@ -511,10 +728,14 @@ function bindControls() {
     e.target.classList.add('active');
     const mode = e.target.dataset.mode;
     const chks = { cloud: document.getElementById('chk-cloud'), curv: document.getElementById('chk-curv'), ell: document.getElementById('chk-ellipsoids') };
-    if (mode==='curvature') { chks.cloud.checked=true; chks.curv.checked=true; chks.ell.checked=false; }
-    else if (mode==='metric') { chks.cloud.checked=false; chks.curv.checked=true; chks.ell.checked=true; }
-    else { chks.cloud.checked=true; chks.curv.checked=false; chks.ell.checked=false; }
-    Object.values(chks).forEach(c => c.dispatchEvent(new Event('change')));
+    const surf = document.getElementById('chk-surface');
+    const wire = document.getElementById('chk-wireframe');
+    const conn = document.getElementById('chk-connections');
+    if (mode==='surface') { chks.cloud.checked=false; chks.curv.checked=false; chks.ell.checked=false; surf.checked=true; wire.checked=true; conn.checked=false; }
+    else if (mode==='curvature') { chks.cloud.checked=true; chks.curv.checked=true; chks.ell.checked=false; surf.checked=false; wire.checked=false; conn.checked=true; }
+    else if (mode==='metric') { chks.cloud.checked=false; chks.curv.checked=true; chks.ell.checked=true; surf.checked=false; wire.checked=false; conn.checked=false; }
+    else { chks.cloud.checked=true; chks.curv.checked=false; chks.ell.checked=false; surf.checked=false; wire.checked=false; conn.checked=false; }
+    [chks.cloud, chks.curv, chks.ell, surf, wire, conn].forEach(c => c.dispatchEvent(new Event('change')));
   });
 
   document.getElementById('add-model-btn').addEventListener('click', () => document.getElementById('file-input').click());
