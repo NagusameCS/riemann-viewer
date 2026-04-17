@@ -385,6 +385,10 @@ canvas { display: block; width: 100%; height: 100%; }
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 /* ═══════════════════════════════════════════════════════════════
    Delaunay triangulation (incremental, inline)
@@ -575,9 +579,10 @@ function buildDelaunaySurface(pts3d, values, maxVal, colorFn, subdivIter, dispAm
   const grp = new THREE.Group();
 
   // Fill mesh
-  grp.add(new THREE.Mesh(geo, new THREE.MeshPhongMaterial({
-    vertexColors: true, transparent: true, opacity: 0.72,
-    side: THREE.DoubleSide, shininess: 80, depthWrite: false, flatShading: false,
+  grp.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+    vertexColors: true, transparent: true, opacity: 0.80,
+    side: THREE.DoubleSide, roughness: 0.42, metalness: 0.06,
+    depthWrite: false, envMapIntensity: 0.5,
   })));
 
   // Wireframe
@@ -594,66 +599,109 @@ function buildDelaunaySurface(pts3d, values, maxVal, colorFn, subdivIter, dispAm
 /* ═══════════════════════════════════════════════════════════════
    State
    ═══════════════════════════════════════════════════════════════ */
+const WS = 5.0; // world scale — all point coords multiplied by this
 const models = [];
 const MODEL_GRAYS = [0.50, 0.65, 0.40, 0.55, 0.45, 0.60, 0.35, 0.70];
-let scene, camera, renderer, controls, axesGroup, gridHelper;
+let scene, camera, renderer, composer, controls, axesGroup, gridHelper;
 
 /* ═══════════════════════════════════════════════════════════════
    Scene
    ═══════════════════════════════════════════════════════════════ */
+function makeAxisLabel(text, axisIndex, length, hexColor) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 320; canvas.height = 120;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, 320, 120);
+  ctx.font = 'bold 56px "Segoe UI", system-ui, sans-serif';
+  ctx.fillStyle = '#' + hexColor.toString(16).padStart(6, '0');
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, 160, 60);
+  const tex = new THREE.CanvasTexture(canvas);
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, sizeAttenuation: true }));
+  const p = new THREE.Vector3(); p.setComponent(axisIndex, length + 3.5);
+  sprite.position.copy(p);
+  sprite.scale.set(10, 3.75, 1);
+  return sprite;
+}
+
 function initScene() {
   const container = document.getElementById('canvas-container');
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x08080e);
-  scene.fog = new THREE.FogExp2(0x08080e, 0.008);
+  scene.background = new THREE.Color(0x06060c);
+  scene.fog = new THREE.FogExp2(0x06060c, 0.003);
 
-  camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.01, 1000);
-  camera.position.set(12, 8, 12);
+  camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.01, 2000);
+  camera.position.set(28, 18, 28);
 
-  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
   renderer.setSize(innerWidth, innerHeight);
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.1;
+  renderer.toneMappingExposure = 1.25;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   container.appendChild(renderer.domElement);
 
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
-  controls.dampingFactor = 0.08;
-  controls.minDistance = 0.1;   // can zoom very close
-  controls.maxDistance = 200;
+  controls.dampingFactor = 0.06;
+  controls.minDistance = 0.1;
+  controls.maxDistance = 1200;
 
-  // BW lighting — neutral whites
-  scene.add(new THREE.AmbientLight(0x404040, 2.0));
-  const d1 = new THREE.DirectionalLight(0xffffff, 1.2); d1.position.set(10,15,10); scene.add(d1);
-  const d2 = new THREE.DirectionalLight(0x888888, 0.5); d2.position.set(-10,5,-10); scene.add(d2);
-  const pl = new THREE.PointLight(0x666666, 0.4, 50); pl.position.set(0,10,0); scene.add(pl);
+  // ── Professional 4-light rig ──
+  scene.add(new THREE.AmbientLight(0x1a1a2e, 4.5));
+  const key = new THREE.DirectionalLight(0xffffff, 3.0);
+  key.position.set(30, 45, 30); key.castShadow = true;
+  key.shadow.mapSize.set(2048, 2048); key.shadow.camera.far = 300;
+  scene.add(key);
+  const fill = new THREE.DirectionalLight(0x7799bb, 1.2);
+  fill.position.set(-30, 15, -20); scene.add(fill);
+  const rim = new THREE.DirectionalLight(0x4466cc, 0.9);
+  rim.position.set(0, -15, -30); scene.add(rim);
+  const top = new THREE.PointLight(0x8899ff, 2.0, 200);
+  top.position.set(0, 40, 0); scene.add(top);
 
-  // Grid — very subtle
-  gridHelper = new THREE.GridHelper(30, 30, 0x151518, 0x101013);
-  gridHelper.position.y = -0.01;
+  // ── Grid ──
+  gridHelper = new THREE.GridHelper(200, 80, 0x18181e, 0x111116);
+  gridHelper.position.y = -0.02;
   scene.add(gridHelper);
 
-  // Axes — grayscale
+  // ── Axes + PCA labels ──
   axesGroup = new THREE.Group();
-  const axCols = [0xcc4444, 0x44cc44, 0x4444cc]; // keep axes slightly tinted for readability
+  const axLen = 28;
+  const axCols = [0xff5555, 0x44ee77, 0x5599ff];
+  const axLabels = ['PC1', 'PC2', 'PC3'];
   for (let i = 0; i < 3; i++) {
     const dir = new THREE.Vector3(); dir.setComponent(i, 1);
-    axesGroup.add(new THREE.ArrowHelper(dir, new THREE.Vector3(), 8, axCols[i], 0.3, 0.15));
+    axesGroup.add(new THREE.ArrowHelper(dir, new THREE.Vector3(), axLen, axCols[i], 1.4, 0.7));
+    axesGroup.add(makeAxisLabel(axLabels[i], i, axLen, axCols[i]));
   }
   scene.add(axesGroup);
+
+  // ── Bloom post-processing ──
+  composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  const bloom = new UnrealBloomPass(
+    new THREE.Vector2(innerWidth, innerHeight),
+    0.55,   // strength
+    0.5,    // radius
+    0.78    // threshold
+  );
+  composer.addPass(bloom);
+  composer.addPass(new OutputPass());
 
   addEventListener('resize', () => {
     camera.aspect = innerWidth/innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight);
+    composer.setSize(innerWidth, innerHeight);
   });
 }
 
 function animate() {
   requestAnimationFrame(animate);
   controls.update();
-  renderer.render(scene, camera);
+  composer.render();
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -687,14 +735,14 @@ function addModel(data, idx) {
     const pos = new Float32Array(cloud.length*3);
     const col = new Float32Array(cloud.length*3);
     for (let i = 0; i < cloud.length; i++) {
-      pos[i*3]=cloud[i][0]-cx; pos[i*3+1]=cloud[i][1]-cy; pos[i*3+2]=cloud[i][2]-cz;
+      pos[i*3]=(cloud[i][0]-cx)*WS; pos[i*3+1]=(cloud[i][1]-cy)*WS; pos[i*3+2]=(cloud[i][2]-cz)*WS;
       const g = grayColor(i, cloud.length);
       col[i*3]=g.r; col[i*3+1]=g.g; col[i*3+2]=g.b;
     }
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
     cloudGroup.add(new THREE.Points(geo, new THREE.PointsMaterial({
-      size: 0.12, vertexColors: true, transparent: true, opacity: 0.5, sizeAttenuation: true, depthWrite: false
+      size: 0.42, vertexColors: true, transparent: true, opacity: 0.65, sizeAttenuation: true, depthWrite: false
     })));
   }
   cloudGroup.visible = false;
@@ -704,7 +752,7 @@ function addModel(data, idx) {
   const cloudSurfGroup = new THREE.Group();
   cloudSurfGroup.userData.layer = 'cloud-surface';
   if (cloud.length >= 3) {
-    const cPts = cloud.map(p => [p[0]-cx, p[1]-cy, p[2]-cz]);
+    const cPts = cloud.map(p => [(p[0]-cx)*WS, (p[1]-cy)*WS, (p[2]-cz)*WS]);
     const cVals = cPts.map((_,i) => i / Math.max(cPts.length-1, 1)); // gradient by index
     const csGrp = buildDelaunaySurface(cPts, cVals, 1.0,
       v => { const l = 0.18 + 0.12*v; return new THREE.Color(l,l,l); },
@@ -732,8 +780,8 @@ function addModel(data, idx) {
     const dummy = new THREE.Object3D();
     for (let i = 0; i < curvPts.length; i++) {
       const p = curvPts[i];
-      dummy.position.set(p.pos[0]-cx, p.pos[1]-cy, p.pos[2]-cz);
-      dummy.scale.setScalar(0.06 + 0.14*((p.christoffel_norm||0)/Math.max(maxNorm,1)));
+      dummy.position.set((p.pos[0]-cx)*WS, (p.pos[1]-cy)*WS, (p.pos[2]-cz)*WS);
+      dummy.scale.setScalar(0.28 + 0.55*((p.christoffel_norm||0)/Math.max(maxNorm,1)));
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
       // Curvature spheres get curvature color (the ONE exception to BW)
@@ -755,8 +803,8 @@ function addModel(data, idx) {
     for (const p of curvPts) {
       if (!p.g_diag || p.g_diag.every(v => v===0)) continue;
       const ell = new THREE.Mesh(eGeo, eMat);
-      ell.position.set(p.pos[0]-cx, p.pos[1]-cy, p.pos[2]-cz);
-      const s=0.3, gd=p.g_diag;
+      ell.position.set((p.pos[0]-cx)*WS, (p.pos[1]-cy)*WS, (p.pos[2]-cz)*WS);
+      const s=1.4, gd=p.g_diag;
       ell.scale.set(s*Math.sqrt(Math.abs(gd[0])+0.01), s*Math.sqrt(Math.abs(gd[1])+0.01), s*Math.sqrt(Math.abs(gd[2])+0.01));
       ell.userData.gDiag = gd;
       ellGroup.add(ell);
@@ -770,7 +818,7 @@ function addModel(data, idx) {
   lineGroup.visible = false;
   if (curvPts.length > 2) {
     const lPos = [], lCol = [];
-    const pts3 = curvPts.map(p => new THREE.Vector3(p.pos[0]-cx, p.pos[1]-cy, p.pos[2]-cz));
+    const pts3 = curvPts.map(p => new THREE.Vector3((p.pos[0]-cx)*WS, (p.pos[1]-cy)*WS, (p.pos[2]-cz)*WS));
     for (let i = 0; i < pts3.length; i++) {
       const dists = pts3.map((p,j) => ({j, d: i===j?Infinity:pts3[i].distanceTo(p)})).sort((a,b)=>a.d-b.d);
       for (let k = 0; k < Math.min(2, dists.length); k++) {
@@ -791,7 +839,7 @@ function addModel(data, idx) {
   // ── Curvature surface (the COLORED surface) ──
   let surfGroup = null;
   if (curvPts.length >= 3) {
-    const cPts = curvPts.map(p => [p.pos[0]-cx, p.pos[1]-cy, p.pos[2]-cz]);
+    const cPts = curvPts.map(p => [(p.pos[0]-cx)*WS, (p.pos[1]-cy)*WS, (p.pos[2]-cz)*WS]);
     const cVals = useChristoffel ? norms.slice() : curvPts.map(p => p.R);
     const cMax = useChristoffel ? maxNorm : Math.max(Math.abs(rMin), Math.abs(rMax));
     const cFn = useChristoffel
@@ -826,7 +874,7 @@ function rebuildSurfaces() {
     if (curvPts.length < 3) { m.surfGroup = null; continue; }
     const cx=m.center.x, cy=m.center.y, cz=m.center.z;
     const norms = curvPts.map(p => p.christoffel_norm||0);
-    const cPts = curvPts.map(p => [p.pos[0]-cx, p.pos[1]-cy, p.pos[2]-cz]);
+    const cPts = curvPts.map(p => [(p.pos[0]-cx)*WS, (p.pos[1]-cy)*WS, (p.pos[2]-cz)*WS]);
     const cVals = m.useChristoffel ? norms.slice() : curvPts.map(p => p.R);
     const cMax = m.useChristoffel ? m.maxNorm : Math.max(Math.abs(m.rMin), Math.abs(m.rMax));
     const cFn = m.useChristoffel
@@ -1030,8 +1078,8 @@ function bindControls() {
           if(!o.isInstancedMesh) return;
           const pts=m.data.curvature?.points||[], maxN=Math.max(...pts.map(p=>p.christoffel_norm||0),1), d=new THREE.Object3D();
           for(let i=0;i<pts.length;i++){
-            const p=pts[i]; d.position.set(p.pos[0]-m.center.x,p.pos[1]-m.center.y,p.pos[2]-m.center.z);
-            d.scale.setScalar((0.06+0.14*((p.christoffel_norm||0)/maxN))*(v/2.5));
+            const p=pts[i]; d.position.set((p.pos[0]-m.center.x)*WS,(p.pos[1]-m.center.y)*WS,(p.pos[2]-m.center.z)*WS);
+            d.scale.setScalar((0.28+0.55*((p.christoffel_norm||0)/maxN))*(v/2.5));
             d.updateMatrix(); o.setMatrixAt(i,d.matrix);
           }
           o.instanceMatrix.needsUpdate = true;
