@@ -10,64 +10,169 @@ body { background: #08080e; color: #c8c8d0; font-family: 'Segoe UI', system-ui, 
 #canvas-container { position: fixed; inset: 0; z-index: 0; }
 canvas { display: block; width: 100%; height: 100%; }
 
+/* ─── Panels ─── */
 .panel {
   position: fixed; z-index: 10;
-  background: rgba(12, 12, 20, 0.92);
-  border: 1px solid rgba(100, 120, 255, 0.15);
+  background: rgba(12, 12, 20, 0.94);
+  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 8px;
   backdrop-filter: blur(12px);
   padding: 14px 16px;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 13px; line-height: 1.5;
   max-height: calc(100vh - 40px);
   overflow-y: auto;
 }
 .panel::-webkit-scrollbar { width: 4px; }
-.panel::-webkit-scrollbar-thumb { background: rgba(100,120,255,0.3); border-radius: 2px; }
+.panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
 
 #info-panel { top: 16px; left: 16px; width: 280px; }
-#controls-panel { top: 16px; right: 16px; width: 240px; }
-#legend-panel { bottom: 16px; left: 16px; width: 320px; }
-#stats-panel { bottom: 16px; right: 16px; width: 240px; }
+#legend-panel { bottom: 16px; left: 16px; width: 340px; }
+#stats-panel { bottom: 16px; right: 16px; width: 250px; }
 
-.panel h2 { font-size: 14px; font-weight: 600; color: #8090ff; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-.panel h3 { font-size: 12px; font-weight: 600; color: #60a0ff; margin: 10px 0 4px; }
-.panel label { display: flex; align-items: center; gap: 6px; margin: 3px 0; cursor: pointer; font-size: 12px; }
-.panel label input[type="checkbox"] { accent-color: #6080ff; }
-.panel label input[type="range"] { flex: 1; accent-color: #6080ff; }
+.panel h2 { font-size: 13px; font-weight: 600; color: #b0b0b8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+.panel h3 { font-size: 11px; font-weight: 600; color: #888; margin: 10px 0 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+.panel label { display: flex; align-items: center; gap: 6px; margin: 3px 0; cursor: pointer; font-size: 12px; color: #999; }
+.panel label input[type="checkbox"] { accent-color: #999; }
+.panel label input[type="range"] { flex: 1; accent-color: #888; }
 
+/* ─── Model entries ─── */
 .model-entry {
   display: flex; align-items: center; gap: 8px;
   padding: 6px 8px; margin: 4px 0;
-  background: rgba(255,255,255,0.03);
+  background: rgba(255,255,255,0.02);
   border-radius: 4px;
-  border-left: 3px solid;
+  border-left: 3px solid #666;
 }
-.model-entry .swatch { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
-.model-entry .name { font-weight: 500; flex: 1; font-size: 12px; }
-.model-entry .meta { font-size: 10px; color: #888; }
+.model-entry .swatch { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.model-entry .name { font-weight: 500; flex: 1; font-size: 12px; color: #bbb; }
+.model-entry .meta { font-size: 10px; color: #666; }
 .model-entry button {
-  background: none; border: 1px solid rgba(255,80,80,0.4); color: #f88;
+  background: none; border: 1px solid rgba(255,255,255,0.15); color: #888;
   border-radius: 3px; padding: 1px 6px; font-size: 10px; cursor: pointer;
 }
-.model-entry button:hover { background: rgba(255,80,80,0.15); }
+.model-entry button:hover { background: rgba(255,255,255,0.05); }
 
 .stat-row { display: flex; justify-content: space-between; font-size: 11px; padding: 1px 0; }
-.stat-row .label { color: #888; }
-.stat-row .value { color: #aab; font-variant-numeric: tabular-nums; }
+.stat-row .label { color: #666; }
+.stat-row .value { color: #999; font-variant-numeric: tabular-nums; }
 
 .color-bar { height: 14px; border-radius: 3px; margin: 4px 0; }
-.color-bar-labels { display: flex; justify-content: space-between; font-size: 10px; color: #666; }
+.color-bar-labels { display: flex; justify-content: space-between; font-size: 10px; color: #555; }
 
-.view-btns { display: flex; gap: 4px; margin: 6px 0; }
-.view-btns button {
-  flex: 1; padding: 5px 8px; font-size: 11px;
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(100,120,255,0.2);
-  border-radius: 4px; color: #8090ff; cursor: pointer;
+/* ─── Settings button + overlay ─── */
+#settings-btn {
+  position: fixed; top: 16px; right: 16px; z-index: 20;
+  width: 36px; height: 36px; border-radius: 8px;
+  background: rgba(12,12,20,0.9); border: 1px solid rgba(255,255,255,0.08);
+  color: #888; font-size: 18px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
 }
-.view-btns button.active { background: rgba(60,80,200,0.25); border-color: rgba(100,120,255,0.5); }
-.view-btns button:hover { background: rgba(60,80,200,0.15); }
+#settings-btn:hover { background: rgba(30,30,50,0.95); color: #bbb; }
 
+#settings-overlay {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 30;
+  width: 300px; background: rgba(12,12,20,0.97);
+  border-left: 1px solid rgba(255,255,255,0.06);
+  backdrop-filter: blur(16px);
+  transform: translateX(100%); transition: transform 0.25s ease;
+  overflow-y: auto; padding: 20px 18px;
+}
+#settings-overlay.open { transform: translateX(0); }
+#settings-overlay h2 { font-size: 14px; color: #b0b0b8; margin-bottom: 14px; font-weight: 600; }
+#settings-overlay h3 { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.3px; margin: 14px 0 6px; font-weight: 600; }
+#settings-overlay label { display: flex; align-items: center; gap: 6px; margin: 4px 0; cursor: pointer; font-size: 12px; color: #999; }
+#settings-overlay label input[type="checkbox"] { accent-color: #999; }
+#settings-overlay label input[type="range"] { flex: 1; accent-color: #888; }
+#settings-close {
+  position: absolute; top: 14px; right: 14px; background: none; border: none;
+  color: #666; font-size: 18px; cursor: pointer;
+}
+#settings-close:hover { color: #aaa; }
+
+/* ─── View mode buttons ─── */
+.view-btns { display: flex; gap: 4px; margin: 6px 0; flex-wrap: wrap; }
+.view-btns button {
+  flex: 1; padding: 5px 8px; font-size: 11px; min-width: 60px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 4px; color: #888; cursor: pointer;
+}
+.view-btns button.active { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #ccc; }
+.view-btns button:hover { background: rgba(255,255,255,0.06); }
+
+/* ─── Compare bar ─── */
+#compare-bar {
+  position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 20;
+  display: flex; gap: 6px; align-items: center;
+}
+#compare-bar .model-pill {
+  padding: 4px 12px; border-radius: 14px; font-size: 11px;
+  background: rgba(12,12,20,0.9); border: 1px solid rgba(255,255,255,0.08);
+  color: #999; cursor: pointer; display: flex; align-items: center; gap: 6px;
+}
+#compare-bar .model-pill.active { border-color: rgba(255,255,255,0.2); color: #ccc; }
+#compare-bar .model-pill .dot { width: 6px; height: 6px; border-radius: 50%; }
+#compare-bar #add-compare {
+  width: 28px; height: 28px; border-radius: 50%; font-size: 14px;
+  background: rgba(12,12,20,0.9); border: 1px solid rgba(255,255,255,0.08);
+  color: #666; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+#compare-bar #add-compare:hover { color: #aaa; }
+
+/* ─── Definitions panel ─── */
+#help-btn {
+  position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 20;
+  padding: 5px 14px; border-radius: 14px; font-size: 11px;
+  background: rgba(12,12,20,0.9); border: 1px solid rgba(255,255,255,0.06);
+  color: #666; cursor: pointer; text-decoration: none;
+}
+#help-btn:hover { color: #999; border-color: rgba(255,255,255,0.12); }
+
+#help-overlay {
+  position: fixed; inset: 0; z-index: 40; display: none;
+  align-items: center; justify-content: center;
+  background: rgba(8,8,14,0.92); backdrop-filter: blur(8px);
+}
+#help-overlay.open { display: flex; }
+#help-content {
+  max-width: 640px; width: 90%; max-height: 80vh; overflow-y: auto;
+  background: rgba(16,16,28,0.98); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px; padding: 32px;
+}
+#help-content h2 { font-size: 18px; color: #c0c0c8; margin-bottom: 18px; font-weight: 500; }
+#help-content h3 { font-size: 13px; color: #a0a0a8; margin: 16px 0 6px; font-weight: 600; }
+#help-content p, #help-content li { font-size: 12px; color: #888; line-height: 1.7; }
+#help-content ul { padding-left: 18px; }
+#help-content code { background: rgba(255,255,255,0.05); padding: 1px 5px; border-radius: 3px; font-size: 11px; color: #aaa; }
+#help-content .term { color: #b0b0b8; font-weight: 500; }
+#help-content .close-help {
+  position: absolute; top: 16px; right: 20px; background: none; border: none;
+  color: #666; font-size: 20px; cursor: pointer;
+}
+#help-content .close-help:hover { color: #aaa; }
+
+/* ─── Walkthrough ─── */
+#walkthrough-panel {
+  position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%); z-index: 20;
+  background: rgba(12,12,20,0.95); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px; padding: 14px 20px; max-width: 520px; width: 90%;
+  display: none;
+}
+#walkthrough-panel.open { display: block; }
+#walkthrough-panel h3 { font-size: 12px; color: #999; margin-bottom: 6px; }
+#walkthrough-panel p { font-size: 11px; color: #777; line-height: 1.6; }
+#walkthrough-panel .step-indicator { display: flex; gap: 4px; margin-top: 10px; align-items: center; }
+#walkthrough-panel .step-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.1); }
+#walkthrough-panel .step-dot.active { background: rgba(255,255,255,0.4); }
+#walkthrough-panel .step-btns { display: flex; gap: 8px; margin-top: 10px; }
+#walkthrough-panel .step-btns button {
+  padding: 4px 12px; border-radius: 4px; font-size: 11px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  color: #888; cursor: pointer;
+}
+#walkthrough-panel .step-btns button:hover { color: #bbb; background: rgba(255,255,255,0.06); }
+
+/* ─── Drop zone ─── */
 #drop-zone {
   position: fixed; inset: 0; z-index: 100; display: none;
   align-items: center; justify-content: center;
@@ -75,12 +180,13 @@ canvas { display: block; width: 100%; height: 100%; }
 }
 #drop-zone.active { display: flex; }
 #drop-zone .inner {
-  border: 2px dashed rgba(100, 120, 255, 0.5);
+  border: 2px dashed rgba(255,255,255,0.15);
   border-radius: 16px; padding: 60px 80px; text-align: center;
 }
-#drop-zone .inner h2 { font-size: 20px; color: #8090ff; margin-bottom: 8px; }
-#drop-zone .inner p { color: #666; font-size: 13px; }
+#drop-zone .inner h2 { font-size: 20px; color: #aaa; margin-bottom: 8px; }
+#drop-zone .inner p { color: #555; font-size: 13px; }
 
+/* ─── Loading ─── */
 #loading {
   position: fixed; inset: 0; z-index: 50;
   display: flex; align-items: center; justify-content: center;
@@ -88,60 +194,65 @@ canvas { display: block; width: 100%; height: 100%; }
 }
 #loading .inner { text-align: center; }
 #loading .spinner {
-  width: 32px; height: 32px; border: 2px solid rgba(100,120,255,0.15);
-  border-top-color: #6080ff; border-radius: 50%;
+  width: 32px; height: 32px; border: 2px solid rgba(255,255,255,0.06);
+  border-top-color: #888; border-radius: 50%;
   animation: spin 0.8s linear infinite; margin: 0 auto 12px;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
-#loading p { color: #666; font-size: 13px; }
+#loading p { color: #555; font-size: 13px; }
 
 #home-link {
-  position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
-  z-index: 20; font-size: 12px; color: #4060cc;
-  background: rgba(12,12,20,0.8); padding: 4px 14px;
-  border-radius: 12px; border: 1px solid rgba(100,120,255,0.12);
+  position: fixed; top: 16px; left: 16px; z-index: 20;
+  font-size: 11px; color: #555;
+  background: rgba(12,12,20,0.8); padding: 4px 12px;
+  border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);
   text-decoration: none;
 }
-#home-link:hover { color: #8090ff; border-color: rgba(100,120,255,0.3); }
-
-#add-model-btn {
-  margin-top: 8px; width: 100%; padding: 6px; font-size: 11px;
-  background: rgba(255,255,255,0.03); border: 1px dashed rgba(100,120,255,0.2);
-  border-radius: 4px; color: #6080ff; cursor: pointer;
-}
-#add-model-btn:hover { background: rgba(60,80,200,0.1); }
+#home-link:hover { color: #999; }
 #file-input { display: none; }
+
+/* ─── Tooltip ─── */
+.tip {
+  position: fixed; z-index: 200; display: none;
+  background: rgba(10,10,20,0.96); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px; padding: 8px 12px; font-size: 11px; color: #999;
+  pointer-events: none; max-width: 260px; line-height: 1.5;
+}
 </style>
 </head>
 <body>
 
 <div id="canvas-container"></div>
-
-<a id="home-link" href="./">← All Models</a>
+<a id="home-link" href="./">← Models</a>
 
 <div id="loading" style="display:none;">
-  <div class="inner">
-    <div class="spinner"></div>
-    <p>Loading manifold data…</p>
-  </div>
+  <div class="inner"><div class="spinner"></div><p>Loading manifold…</p></div>
 </div>
 
 <div id="drop-zone">
   <div class="inner">
     <h2>Drop manifold_export.json</h2>
-    <p>Add another model for comparison</p>
+    <p>Add model for comparison</p>
   </div>
 </div>
 
+<!-- Compare bar (top center) -->
+<div id="compare-bar" style="display:none;"></div>
+
+<!-- Model info (top-left) -->
 <div class="panel" id="info-panel" style="display:none;">
   <h2>Models</h2>
   <div id="model-list"></div>
-  <button id="add-model-btn">+ Add Model</button>
-  <input type="file" id="file-input" accept=".json" multiple>
 </div>
 
-<div class="panel" id="controls-panel" style="display:none;">
-  <h2>Display</h2>
+<!-- Settings button -->
+<button id="settings-btn" title="Settings">⚙</button>
+
+<!-- Settings overlay (slides from right) -->
+<div id="settings-overlay">
+  <button id="settings-close">✕</button>
+  <h2>Settings</h2>
+
   <h3>View Mode</h3>
   <div class="view-btns" id="view-mode-btns">
     <button class="active" data-mode="surface">Surface</button>
@@ -149,30 +260,114 @@ canvas { display: block; width: 100%; height: 100%; }
     <button data-mode="metric">Metric</button>
     <button data-mode="cloud">Cloud</button>
   </div>
+
   <h3>Layers</h3>
   <label><input type="checkbox" id="chk-cloud"> PCA Point Cloud</label>
+  <label><input type="checkbox" id="chk-cloud-surface"> PCA Cloud Surface</label>
   <label><input type="checkbox" id="chk-curv"> Curvature Field</label>
   <label><input type="checkbox" id="chk-ellipsoids"> Metric Ellipsoids</label>
-  <label><input type="checkbox" id="chk-surface" checked> Manifold Surface</label>
-  <label><input type="checkbox" id="chk-wireframe"> Surface Wireframe</label>
+  <label><input type="checkbox" id="chk-surface" checked> Curvature Surface</label>
+  <label><input type="checkbox" id="chk-wireframe" checked> Wireframe Overlay</label>
   <label><input type="checkbox" id="chk-connections"> Connections</label>
   <label><input type="checkbox" id="chk-axes" checked> Axes</label>
   <label><input type="checkbox" id="chk-grid" checked> Grid</label>
+
+  <h3>Subdivision</h3>
+  <label><input type="range" id="rng-subdiv" min="0" max="4" step="1" value="2"> <span id="val-subdiv">2</span> iterations</label>
+
   <h3>Point Size</h3>
   <label><input type="range" id="rng-size" min="0.5" max="8" step="0.1" value="2.5"> <span id="val-size">2.5</span></label>
+
+  <h3>Curvature Displacement</h3>
+  <label><input type="range" id="rng-disp" min="0" max="1" step="0.01" value="0.15"> <span id="val-disp">0.15</span></label>
+
   <h3>Curvature Scale</h3>
   <label><input type="range" id="rng-curv-scale" min="0" max="2" step="0.01" value="1"> <span id="val-curv-scale">1.0</span></label>
+
   <h3>Ellipsoid Scale</h3>
   <label><input type="range" id="rng-ellipsoid" min="0.05" max="2" step="0.05" value="0.3"> <span id="val-ellipsoid">0.3</span></label>
+
   <h3>Opacity</h3>
   <label><input type="range" id="rng-opacity" min="0.1" max="1" step="0.05" value="0.85"> <span id="val-opacity">0.85</span></label>
+
+  <h3>Multi-Model</h3>
+  <button id="add-model-btn" style="width:100%;padding:6px;font-size:11px;background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.1);border-radius:4px;color:#666;cursor:pointer;margin-top:4px;">+ Add Model (JSON)</button>
+  <input type="file" id="file-input" accept=".json" multiple>
 </div>
 
+<!-- Help button -->
+<button id="help-btn">What is this?</button>
+
+<!-- Help / Definitions overlay -->
+<div id="help-overlay">
+  <div id="help-content" style="position:relative;">
+    <button class="close-help">✕</button>
+    <h2>Riemannian Manifold Viewer — Guide</h2>
+
+    <h3>What am I looking at?</h3>
+    <p>This viewer visualizes the <span class="term">weight space geometry</span> of neural networks as a Riemannian manifold. Each model's learned parameters live in a high-dimensional space. We project them to 3D via PCA and compute differential-geometric quantities to understand the shape of the "landscape" the model has learned.</p>
+
+    <h3>Definitions</h3>
+    <ul>
+      <li><span class="term">Riemannian Manifold</span> — A smooth surface equipped with a way to measure distances, angles, and curvature at every point. Here, the "surface" is the space of model weights.</li>
+      <li><span class="term">Scalar Curvature (R)</span> — A single number at each point that summarizes how curved the manifold is there. <code>R &lt; 0</code> = saddle-like (hyperbolic), <code>R &gt; 0</code> = sphere-like, <code>R = 0</code> = flat.</li>
+      <li><span class="term">Metric Tensor (g)</span> — Defines how to measure infinitesimal distances on the manifold. The diagonal entries <code>g<sub>ii</sub></code> control stretching along each PCA axis. Visualized as ellipsoids.</li>
+      <li><span class="term">Christoffel Symbols (Γ)</span> — Describe how coordinate axes "twist" as you move across the manifold. <code>‖Γ‖</code> is their norm — higher means more connection curvature. Controls the size of curvature field points.</li>
+      <li><span class="term">PCA Point Cloud</span> — The raw 3D projection (via Principal Component Analysis) of weight vectors from different layers of the model. No curvature data — just spatial positions.</li>
+      <li><span class="term">Curvature Field</span> — Sampled points where R, g, and Γ were actually computed. These are the data points the surface is built from.</li>
+      <li><span class="term">Geodesic</span> — The shortest path between two points on the manifold (like a great circle on a sphere).</li>
+      <li><span class="term">Intrinsic Dimension</span> — How many independent directions the weight space actually uses (often much less than the full parameter count).</li>
+    </ul>
+
+    <h3>Color Scheme</h3>
+    <ul>
+      <li>The <span class="term">curvature surface</span> is colored by scalar curvature R: blue tones = negative (hyperbolic), warm tones = positive (elliptic), neutral = near zero.</li>
+      <li>All other elements (point cloud, connections, wireframe, ellipsoids) are rendered in <span class="term">grayscale</span> to keep focus on the curvature.</li>
+      <li>When all curvature values are identical (R≈0), coloring falls back to <span class="term">Christoffel norm</span> — from cool to warm based on ‖Γ‖.</li>
+    </ul>
+
+    <h3>How Inference Works (Step by Step)</h3>
+    <p>When a prompt like <code>"The capital of France is"</code> passes through the model:</p>
+    <ol style="padding-left:18px; font-size:12px; color:#888; line-height:1.8;">
+      <li><strong>Tokenization</strong> — The text is split into tokens (subword pieces). Each token maps to an embedding vector — a point in the high-dimensional weight space.</li>
+      <li><strong>Layer-by-layer transform</strong> — The embedding travels through each transformer layer. At each layer, the attention mechanism and feed-forward network transform it. Geometrically, the point "slides" along the manifold — following a path determined by the weights at that layer.</li>
+      <li><strong>Attention as parallel transport</strong> — Self-attention can be seen as parallel-transporting the token's representation along the manifold. The Christoffel symbols Γ govern how this transport works — they encode the "curvature" of the path.</li>
+      <li><strong>Curvature = information density</strong> — Regions where |R| is high correspond to layers/weight regions where the model makes sharp representational changes. Flat regions (R≈0) suggest smooth, gradual transformation.</li>
+      <li><strong>Output projection</strong> — The final representation is projected to vocabulary space, producing logits for the next token. The model predicts: <code>"Paris"</code>.</li>
+    </ol>
+    <p>The manifold you see here captures the <em>static</em> geometry of the weight space — the "terrain" over which all such inference paths travel.</p>
+
+    <h3>Controls</h3>
+    <ul>
+      <li><strong>Orbit</strong> — Left-click + drag to rotate</li>
+      <li><strong>Zoom</strong> — Scroll wheel (can zoom very close)</li>
+      <li><strong>Pan</strong> — Right-click + drag</li>
+      <li><strong>Settings ⚙</strong> — Toggle layers, adjust subdivision, displacement, opacity</li>
+      <li><strong>Subdivision</strong> — Controls mesh resolution (0 = raw triangles, 4 = very smooth). Rebuilds the surface when changed.</li>
+      <li><strong>Compare</strong> — Load multiple models via Settings → Add Model, or drag-and-drop JSON files</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Walkthrough panel -->
+<div id="walkthrough-panel">
+  <h3 id="wt-title"></h3>
+  <p id="wt-body"></p>
+  <div class="step-indicator" id="wt-dots"></div>
+  <div class="step-btns">
+    <button id="wt-prev">← Prev</button>
+    <button id="wt-next">Next →</button>
+    <button id="wt-close" style="margin-left:auto;">Close</button>
+  </div>
+</div>
+
+<!-- Legend (bottom-left) -->
 <div class="panel" id="legend-panel" style="display:none;">
   <h2>Legend</h2>
   <div id="legend-content"></div>
 </div>
 
+<!-- Stats (bottom-right) -->
 <div class="panel" id="stats-panel" style="display:none;">
   <h2>Geometry</h2>
   <div id="stats-content"></div>
@@ -191,394 +386,347 @@ canvas { display: block; width: 100%; height: 100%; }
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-/* ═══ Delaunay triangulation (Delaunator port — minimal inline) ═══ */
-/* Based on https://github.com/mapbox/delaunator (ISC license) */
+/* ═══════════════════════════════════════════════════════════════
+   Delaunay triangulation (incremental, inline)
+   ═══════════════════════════════════════════════════════════════ */
 function delaunay2D(coords) {
-  // coords: flat [x0,y0, x1,y1, ...]
   const n = coords.length >> 1;
   if (n < 3) return [];
-
   const ids = new Uint32Array(n);
   const dists = new Float64Array(n);
-
-  // Find bounding box center
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (let i = 0; i < n; i++) {
     const x = coords[2*i], y = coords[2*i+1];
     if (x < minX) minX = x; if (y < minY) minY = y;
     if (x > maxX) maxX = x; if (y > maxY) maxY = y;
   }
-  const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
-
-  // Find seed triangle: closest to center, then smallest circumcircle
-  let i0 = 0, i1 = 0, i2 = 0, minDist = Infinity;
-  for (let i = 0; i < n; i++) {
-    const d = (coords[2*i]-cx)**2 + (coords[2*i+1]-cy)**2;
-    if (d < minDist) { i0 = i; minDist = d; }
+  const cx = (minX+maxX)/2, cy = (minY+maxY)/2;
+  let i0=0,i1=0,i2=0, md=Infinity;
+  for (let i=0;i<n;i++){ const d=(coords[2*i]-cx)**2+(coords[2*i+1]-cy)**2; if(d<md){i0=i;md=d;} }
+  const i0x=coords[2*i0],i0y=coords[2*i0+1]; md=Infinity;
+  for (let i=0;i<n;i++){ if(i===i0)continue; const d=(coords[2*i]-i0x)**2+(coords[2*i+1]-i0y)**2; if(d<md&&d>0){i1=i;md=d;} }
+  let i1x=coords[2*i1],i1y=coords[2*i1+1], mr=Infinity;
+  for (let i=0;i<n;i++){ if(i===i0||i===i1)continue; const r=circumR(i0x,i0y,i1x,i1y,coords[2*i],coords[2*i+1]); if(r<mr){i2=i;mr=r;} }
+  if (mr===Infinity) return [];
+  let i2x=coords[2*i2],i2y=coords[2*i2+1];
+  if (orient2(i0x,i0y,i1x,i1y,i2x,i2y)<0){ let t=i1;i1=i2;i2=t; let tx=i1x;i1x=i2x;i2x=tx; let ty=i1y;i1y=i2y;i2y=ty; }
+  const cen=circumC(i0x,i0y,i1x,i1y,i2x,i2y);
+  for(let i=0;i<n;i++) dists[i]=(coords[2*i]-cen.x)**2+(coords[2*i+1]-cen.y)**2;
+  for(let i=0;i<n;i++) ids[i]=i;
+  ids.sort((a,b)=>dists[a]-dists[b]);
+  const tris=[], hull=[i0,i1,i2]; tris.push(i0,i1,i2);
+  for(let k=0;k<n;k++){
+    const i=ids[k]; if(i===i0||i===i1||i===i2)continue;
+    const px=coords[2*i],py=coords[2*i+1];
+    let start=-1;
+    for(let j=0;j<hull.length;j++){ const a=hull[j],b=hull[(j+1)%hull.length]; if(orient2(coords[2*a],coords[2*a+1],coords[2*b],coords[2*b+1],px,py)<0){if(start===-1)start=j;} }
+    if(start===-1)continue;
+    const vis=[];
+    for(let j=0;j<hull.length;j++){ const idx=(start+j)%hull.length; const a=hull[idx],b=hull[(idx+1)%hull.length]; if(orient2(coords[2*a],coords[2*a+1],coords[2*b],coords[2*b+1],px,py)<0) vis.push(idx); else if(vis.length>0) break; }
+    if(!vis.length)continue;
+    for(const vi of vis){ tris.push(i,hull[vi],hull[(vi+1)%hull.length]); }
+    hull.splice(vis[0]+1, vis.length-1>=0?vis.length-1:0); hull.splice(vis[0]+1,0,i);
   }
-  const i0x = coords[2*i0], i0y = coords[2*i0+1];
-  minDist = Infinity;
-  for (let i = 0; i < n; i++) {
-    if (i === i0) continue;
-    const d = (coords[2*i]-i0x)**2 + (coords[2*i+1]-i0y)**2;
-    if (d < minDist && d > 0) { i1 = i; minDist = d; }
+  return tris;
+}
+function orient2(ax,ay,bx,by,cx,cy){return(bx-ax)*(cy-ay)-(by-ay)*(cx-ax);}
+function circumR(ax,ay,bx,by,cx,cy){const dx=bx-ax,dy=by-ay,ex=cx-ax,ey=cy-ay,bl=dx*dx+dy*dy,cl=ex*ex+ey*ey,d=2*(dx*ey-dy*ex);if(Math.abs(d)<1e-10)return Infinity;const x=(ey*bl-dy*cl)/d,y=(dx*cl-ex*bl)/d;return x*x+y*y;}
+function circumC(ax,ay,bx,by,cx,cy){const dx=bx-ax,dy=by-ay,ex=cx-ax,ey=cy-ay,bl=dx*dx+dy*dy,cl=ex*ex+ey*ey,d=2*(dx*ey-dy*ex);return{x:ax+(ey*bl-dy*cl)/d,y:ay+(dx*cl-ex*bl)/d};}
+
+/* ═══════════════════════════════════════════════════════════════
+   Color
+   ═══════════════════════════════════════════════════════════════ */
+// Scalar curvature: blue-white-red diverging (the ONLY colored element)
+function curvColor(R, rMin, rMax) {
+  const range = Math.max(Math.abs(rMin), Math.abs(rMax), 1e-10);
+  const t = Math.min(Math.abs(R) / range, 1);
+  if (R < 0) {
+    // negative → blue deepening
+    return new THREE.Color().setHSL(0.6, 0.5 + 0.4*t, 0.85 - 0.45*t);
+  } else {
+    // positive → red deepening
+    return new THREE.Color().setHSL(0.02, 0.5 + 0.4*t, 0.85 - 0.45*t);
   }
-  let i1x = coords[2*i1], i1y = coords[2*i1+1];
-  let minRadius = Infinity;
-  for (let i = 0; i < n; i++) {
-    if (i === i0 || i === i1) continue;
-    const r = circumradius(i0x, i0y, i1x, i1y, coords[2*i], coords[2*i+1]);
-    if (r < minRadius) { i2 = i; minRadius = r; }
-  }
-  if (minRadius === Infinity) return []; // collinear
-
-  let i2x = coords[2*i2], i2y = coords[2*i2+1];
-  // Ensure CCW
-  if (orient(i0x,i0y,i1x,i1y,i2x,i2y) < 0) {
-    const tmp = i1; i1 = i2; i2 = tmp;
-    const tx = i1x; i1x = i2x; i2x = tx;
-    const ty = i1y; i1y = i2y; i2y = ty;
-  }
-  const center = circumcenter(i0x,i0y,i1x,i1y,i2x,i2y);
-
-  for (let i = 0; i < n; i++) dists[i] = (coords[2*i]-center.x)**2 + (coords[2*i+1]-center.y)**2;
-  quicksortIds(ids, dists, 0, n-1);
-
-  // Build hull and triangles using simple incremental insertion
-  const triangles = [];
-  const hull = [i0, i1, i2];
-  triangles.push(i0, i1, i2);
-
-  for (let k = 0; k < n; k++) {
-    const i = ids[k];
-    if (i === i0 || i === i1 || i === i2) continue;
-    const px = coords[2*i], py = coords[2*i+1];
-
-    // Find visible hull edges
-    let start = -1;
-    for (let j = 0; j < hull.length; j++) {
-      const a = hull[j], b = hull[(j+1) % hull.length];
-      if (orient(coords[2*a], coords[2*a+1], coords[2*b], coords[2*b+1], px, py) < 0) {
-        if (start === -1) start = j;
-      }
-    }
-    if (start === -1) continue; // inside hull
-
-    // Walk visible edges
-    const visible = [];
-    for (let j = 0; j < hull.length; j++) {
-      const idx = (start + j) % hull.length;
-      const a = hull[idx], b = hull[(idx+1) % hull.length];
-      if (orient(coords[2*a], coords[2*a+1], coords[2*b], coords[2*b+1], px, py) < 0) {
-        visible.push(idx);
-      } else if (visible.length > 0) break;
-    }
-    if (!visible.length) continue;
-
-    for (const vi of visible) {
-      const a = hull[vi], b = hull[(vi+1) % hull.length];
-      triangles.push(i, a, b);
-    }
-
-    // Update hull
-    const first = visible[0];
-    const count = visible.length;
-    hull.splice(first + 1, count - 1 >= 0 ? count - 1 : 0);
-    hull.splice(first + 1, 0, i);
-  }
-  return triangles;
+}
+// Christoffel fallback (when all R≈0): grayscale brightness by norm
+function christoffelColor(norm, maxNorm) {
+  const t = Math.min(norm / Math.max(maxNorm, 1e-10), 1);
+  const l = 0.85 - 0.55*t;
+  return new THREE.Color(l, l, l);
+}
+// BW grayscale for non-curvature elements
+function grayColor(i, n) {
+  const v = 0.25 + 0.3*(i/Math.max(n-1,1));
+  return new THREE.Color(v, v, v);
 }
 
-function orient(ax,ay,bx,by,cx,cy) { return (bx-ax)*(cy-ay)-(by-ay)*(cx-ax); }
-function circumradius(ax,ay,bx,by,cx,cy) {
-  const dx=bx-ax, dy=by-ay, ex=cx-ax, ey=cy-ay;
-  const bl=dx*dx+dy*dy, cl=ex*ex+ey*ey, d=2*(dx*ey-dy*ex);
-  if (Math.abs(d) < 1e-10) return Infinity;
-  const x=(ey*bl-dy*cl)/d, y=(dx*cl-ex*bl)/d;
-  return x*x+y*y;
-}
-function circumcenter(ax,ay,bx,by,cx,cy) {
-  const dx=bx-ax, dy=by-ay, ex=cx-ax, ey=cy-ay;
-  const bl=dx*dx+dy*dy, cl=ex*ex+ey*ey, d=2*(dx*ey-dy*ex);
-  return { x: ax+(ey*bl-dy*cl)/d, y: ay+(dx*cl-ex*bl)/d };
-}
-function quicksortIds(ids, dists, left, right) {
-  for (let i = 0; i < ids.length; i++) ids[i] = i;
-  ids.sort((a,b) => dists[a]-dists[b]);
-}
+/* ═══════════════════════════════════════════════════════════════
+   Build Delaunay surface mesh with subdivision + displacement
+   ═══════════════════════════════════════════════════════════════ */
+let currentSubdiv = 2;
+let currentDisp = 0.15;
 
-/* Build surface mesh from curvature points via Delaunay + subdivision */
-function buildSurface(curvPts, cx, cy, cz, rMin, rMax, modelColor) {
-  if (curvPts.length < 3) return null;
-  const pts = curvPts.map(p => [p.pos[0]-cx, p.pos[1]-cy, p.pos[2]-cz]);
-  const Rs = curvPts.map(p => p.R);
-  const norms = curvPts.map(p => p.christoffel_norm || 0);
-  const maxNorm = Math.max(...norms, 1e-10);
-
-  // Determine if curvature is degenerate (all R ≈ same value)
-  const rRange = Math.abs(rMax - rMin);
-  const useChristoffel = rRange < 1e-8; // fallback to ‖Γ‖ coloring
-
-  // Pick 2 axes with greatest spread for triangulation projection
+function buildDelaunaySurface(pts3d, values, maxVal, colorFn, subdivIter, dispAmt, modelColor) {
+  if (pts3d.length < 3) return null;
+  // Determine projection axes (2 with most spread)
   const spreads = [0,1,2].map(ax => {
-    const vals = pts.map(p => p[ax]);
+    const vals = pts3d.map(p => p[ax]);
     return Math.max(...vals) - Math.min(...vals);
   });
   const axes = [0,1,2].sort((a,b) => spreads[b]-spreads[a]);
-  const a0 = axes[0], a1 = axes[1], a2 = axes[2]; // height axis = least spread
+  const a0 = axes[0], a1 = axes[1];
 
-  // Flatten to 2D for Delaunay
-  const coords2d = new Float64Array(pts.length * 2);
-  for (let i = 0; i < pts.length; i++) {
-    coords2d[i*2]   = pts[i][a0];
-    coords2d[i*2+1] = pts[i][a1];
+  const coords2d = new Float64Array(pts3d.length*2);
+  for (let i = 0; i < pts3d.length; i++) {
+    coords2d[i*2] = pts3d[i][a0];
+    coords2d[i*2+1] = pts3d[i][a1];
   }
+  const triIdx = delaunay2D(coords2d);
+  if (triIdx.length < 3) return null;
 
-  const triIndices = delaunay2D(coords2d);
-  if (triIndices.length < 3) return null;
-
-  // Gentle alpha filter: only remove edges > 6x median
-  const edgeLens = [];
-  for (let i = 0; i < triIndices.length; i += 3) {
-    for (const [a,b] of [[triIndices[i],triIndices[i+1]],[triIndices[i+1],triIndices[i+2]],[triIndices[i+2],triIndices[i]]]) {
-      const dx=pts[a][0]-pts[b][0], dy=pts[a][1]-pts[b][1], dz=pts[a][2]-pts[b][2];
-      edgeLens.push(Math.sqrt(dx*dx+dy*dy+dz*dz));
+  // Alpha filter: 6x median edge
+  const eLens = [];
+  for (let i = 0; i < triIdx.length; i += 3) {
+    for (const [a,b] of [[triIdx[i],triIdx[i+1]],[triIdx[i+1],triIdx[i+2]],[triIdx[i+2],triIdx[i]]]) {
+      const dx=pts3d[a][0]-pts3d[b][0], dy=pts3d[a][1]-pts3d[b][1], dz=pts3d[a][2]-pts3d[b][2];
+      eLens.push(Math.sqrt(dx*dx+dy*dy+dz*dz));
     }
   }
-  edgeLens.sort((a,b) => a-b);
-  const medianEdge = edgeLens[Math.floor(edgeLens.length/2)];
-  const maxEdge = medianEdge * 6;
+  eLens.sort((a,b)=>a-b);
+  const medE = eLens[Math.floor(eLens.length/2)], maxE = medE*6;
 
   let tris = [];
-  for (let i = 0; i < triIndices.length; i += 3) {
-    const i0 = triIndices[i], i1 = triIndices[i+1], i2 = triIndices[i+2];
+  for (let i = 0; i < triIdx.length; i += 3) {
+    const i0=triIdx[i], i1=triIdx[i+1], i2=triIdx[i+2];
     let ok = true;
     for (const [a,b] of [[i0,i1],[i1,i2],[i2,i0]]) {
-      const dx=pts[a][0]-pts[b][0], dy=pts[a][1]-pts[b][1], dz=pts[a][2]-pts[b][2];
-      if (Math.sqrt(dx*dx+dy*dy+dz*dz) > maxEdge) { ok = false; break; }
+      const dx=pts3d[a][0]-pts3d[b][0], dy=pts3d[a][1]-pts3d[b][1], dz=pts3d[a][2]-pts3d[b][2];
+      if (Math.sqrt(dx*dx+dy*dy+dz*dz) > maxE) { ok=false; break; }
     }
-    if (ok) tris.push(i0, i1, i2);
+    if (ok) tris.push(i0,i1,i2);
   }
-  if (tris.length < 3) tris = Array.from(triIndices); // fallback: keep all
+  if (tris.length < 3) tris = Array.from(triIdx);
 
-  // Midpoint subdivision (2 iterations → ~4x triangles each → smooth mesh)
-  let verts = pts.map(p => [...p]);
-  let vR = Rs.slice();
-  let vNorm = norms.slice();
-
-  for (let iter = 0; iter < 2; iter++) {
-    const newTris = [];
-    const edgeMap = new Map();
-    function mid(a, b) {
-      const key = Math.min(a,b) + '-' + Math.max(a,b);
-      if (edgeMap.has(key)) return edgeMap.get(key);
+  // Subdivision
+  let verts = pts3d.map(p => [...p]);
+  let vVal = values.slice();
+  for (let iter = 0; iter < subdivIter; iter++) {
+    const newT = [], eMap = new Map();
+    function mid(a,b) {
+      const key = Math.min(a,b)+'-'+Math.max(a,b);
+      if (eMap.has(key)) return eMap.get(key);
       const idx = verts.length;
-      verts.push([(verts[a][0]+verts[b][0])/2, (verts[a][1]+verts[b][1])/2, (verts[a][2]+verts[b][2])/2]);
-      vR.push((vR[a]+vR[b])/2);
-      vNorm.push((vNorm[a]+vNorm[b])/2);
-      edgeMap.set(key, idx);
+      verts.push([(verts[a][0]+verts[b][0])/2,(verts[a][1]+verts[b][1])/2,(verts[a][2]+verts[b][2])/2]);
+      vVal.push((vVal[a]+vVal[b])/2);
+      eMap.set(key, idx);
       return idx;
     }
     for (let i = 0; i < tris.length; i += 3) {
-      const a = tris[i], b = tris[i+1], c = tris[i+2];
-      const ab = mid(a,b), bc = mid(b,c), ca = mid(c,a);
-      newTris.push(a,ab,ca, ab,b,bc, ca,bc,c, ab,bc,ca);
+      const a=tris[i], b=tris[i+1], c=tris[i+2];
+      const ab=mid(a,b), bc=mid(b,c), ca=mid(c,a);
+      newT.push(a,ab,ca, ab,b,bc, ca,bc,c, ab,bc,ca);
     }
-    tris = newTris;
+    tris = newT;
   }
 
-  // Displace vertices along surface normal by curvature to create 3D shape
-  // First build geometry to get normals
+  // Build geo for normals
   const geo = new THREE.BufferGeometry();
-  const positions = new Float32Array(verts.length * 3);
-  const colors = new Float32Array(verts.length * 3);
-
+  const pos = new Float32Array(verts.length*3);
+  const col = new Float32Array(verts.length*3);
   for (let i = 0; i < verts.length; i++) {
-    positions[i*3] = verts[i][0]; positions[i*3+1] = verts[i][1]; positions[i*3+2] = verts[i][2];
+    pos[i*3]=verts[i][0]; pos[i*3+1]=verts[i][1]; pos[i*3+2]=verts[i][2];
   }
-  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   geo.setIndex(tris);
   geo.computeVertexNormals();
 
-  // Displace along normals by curvature (or christoffel norm if R is flat)
-  const normArr = geo.getAttribute('normal').array;
-  const maxSpread = Math.max(...spreads);
-  const dispScale = maxSpread * 0.15; // displacement magnitude relative to mesh size
-
-  for (let i = 0; i < verts.length; i++) {
-    let disp;
-    if (useChristoffel) {
-      disp = (vNorm[i] / maxNorm) * dispScale;
-    } else {
-      // Normalize R to [-1, 1] range, then scale
-      const absMax = Math.max(Math.abs(rMin), Math.abs(rMax));
-      disp = (vR[i] / absMax) * dispScale;
+  // Displace along normals
+  if (dispAmt > 0) {
+    const nArr = geo.getAttribute('normal').array;
+    const maxSpread = Math.max(...spreads);
+    const scale = maxSpread * dispAmt;
+    for (let i = 0; i < verts.length; i++) {
+      const d = (vVal[i] / Math.max(maxVal, 1e-10)) * scale;
+      pos[i*3]   += nArr[i*3]*d;
+      pos[i*3+1] += nArr[i*3+1]*d;
+      pos[i*3+2] += nArr[i*3+2]*d;
     }
-    positions[i*3]   += normArr[i*3]   * disp;
-    positions[i*3+1] += normArr[i*3+1] * disp;
-    positions[i*3+2] += normArr[i*3+2] * disp;
+    geo.getAttribute('position').needsUpdate = true;
+    geo.computeVertexNormals();
   }
-  geo.getAttribute('position').needsUpdate = true;
-  geo.computeVertexNormals(); // recompute after displacement
 
-  // Color vertices
+  // Color
   for (let i = 0; i < verts.length; i++) {
-    const c = useChristoffel
-      ? christoffelColor(vNorm[i], maxNorm)
-      : curvColor(vR[i], rMin, rMax);
-    colors[i*3] = c.r; colors[i*3+1] = c.g; colors[i*3+2] = c.b;
+    const c = colorFn(vVal[i]);
+    col[i*3]=c.r; col[i*3+1]=c.g; col[i*3+2]=c.b;
   }
-  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
 
-  const surfaceGroup = new THREE.Group();
-  surfaceGroup.userData.layer = 'surface';
+  const grp = new THREE.Group();
 
-  // Filled surface — higher opacity, smooth shading
-  const surfMat = new THREE.MeshPhongMaterial({
+  // Fill mesh
+  grp.add(new THREE.Mesh(geo, new THREE.MeshPhongMaterial({
     vertexColors: true, transparent: true, opacity: 0.72,
-    side: THREE.DoubleSide, shininess: 80, depthWrite: false,
-    flatShading: false,
-  });
-  surfaceGroup.add(new THREE.Mesh(geo, surfMat));
+    side: THREE.DoubleSide, shininess: 80, depthWrite: false, flatShading: false,
+  })));
 
-  // Wireframe overlay
-  const wireMat = new THREE.MeshBasicMaterial({
-    color: modelColor, wireframe: true, transparent: true, opacity: 0.06, depthWrite: false,
-  });
-  const wireMesh = new THREE.Mesh(geo, wireMat);
-  wireMesh.userData.isWireframe = true;
-  surfaceGroup.add(wireMesh);
+  // Wireframe
+  const wire = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+    color: 0x444444, wireframe: true, transparent: true, opacity: 0.08, depthWrite: false,
+  }));
+  wire.userData.isWireframe = true;
+  grp.add(wire);
 
-  return surfaceGroup;
+  grp.userData.triCount = tris.length / 3;
+  return grp;
 }
 
-/* ═══ State ═══ */
+/* ═══════════════════════════════════════════════════════════════
+   State
+   ═══════════════════════════════════════════════════════════════ */
 const models = [];
-const MODEL_COLORS = [0x4488ff, 0xff6644, 0x44cc88, 0xccaa44, 0xcc44cc, 0x44cccc, 0xff88aa, 0xaaff44];
+const MODEL_GRAYS = [0.50, 0.65, 0.40, 0.55, 0.45, 0.60, 0.35, 0.70];
 let scene, camera, renderer, controls, axesGroup, gridHelper;
 
-/* ═══ Scene ═══ */
+/* ═══════════════════════════════════════════════════════════════
+   Scene
+   ═══════════════════════════════════════════════════════════════ */
 function initScene() {
   const container = document.getElementById('canvas-container');
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x08080e);
-  scene.fog = new THREE.FogExp2(0x08080e, 0.012);
+  scene.fog = new THREE.FogExp2(0x08080e, 0.008);
 
-  camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 500);
+  camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.01, 1000);
   camera.position.set(12, 8, 12);
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(innerWidth, innerHeight);
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.2;
+  renderer.toneMappingExposure = 1.1;
   container.appendChild(renderer.domElement);
 
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
-  controls.minDistance = 2;
-  controls.maxDistance = 100;
+  controls.minDistance = 0.1;   // can zoom very close
+  controls.maxDistance = 200;
 
-  scene.add(new THREE.AmbientLight(0x303050, 1.5));
-  const d1 = new THREE.DirectionalLight(0x8888ff, 1.0); d1.position.set(10, 15, 10); scene.add(d1);
-  const d2 = new THREE.DirectionalLight(0xff8866, 0.5); d2.position.set(-10, 5, -10); scene.add(d2);
-  const pl = new THREE.PointLight(0x4466ff, 0.5, 50); pl.position.set(0, 10, 0); scene.add(pl);
+  // BW lighting — neutral whites
+  scene.add(new THREE.AmbientLight(0x404040, 2.0));
+  const d1 = new THREE.DirectionalLight(0xffffff, 1.2); d1.position.set(10,15,10); scene.add(d1);
+  const d2 = new THREE.DirectionalLight(0x888888, 0.5); d2.position.set(-10,5,-10); scene.add(d2);
+  const pl = new THREE.PointLight(0x666666, 0.4, 50); pl.position.set(0,10,0); scene.add(pl);
 
-  gridHelper = new THREE.GridHelper(30, 30, 0x1a1a2e, 0x111122);
+  // Grid — very subtle
+  gridHelper = new THREE.GridHelper(30, 30, 0x151518, 0x101013);
   gridHelper.position.y = -0.01;
   scene.add(gridHelper);
 
+  // Axes — grayscale
   axesGroup = new THREE.Group();
-  const axColors = [0xff4444, 0x44ff44, 0x4444ff];
+  const axCols = [0xcc4444, 0x44cc44, 0x4444cc]; // keep axes slightly tinted for readability
   for (let i = 0; i < 3; i++) {
     const dir = new THREE.Vector3(); dir.setComponent(i, 1);
-    axesGroup.add(new THREE.ArrowHelper(dir, new THREE.Vector3(), 8, axColors[i], 0.3, 0.15));
+    axesGroup.add(new THREE.ArrowHelper(dir, new THREE.Vector3(), 8, axCols[i], 0.3, 0.15));
   }
   scene.add(axesGroup);
 
   addEventListener('resize', () => {
-    camera.aspect = innerWidth / innerHeight;
+    camera.aspect = innerWidth/innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight);
   });
 }
 
-function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
-
-/* ═══ Color ═══ */
-function curvColor(R, rMin, rMax) {
-  const range = Math.max(Math.abs(rMin), Math.abs(rMax), 1e-10);
-  const t = Math.min(Math.abs(R) / range, 1);
-  if (R < 0) {
-    // Negative curvature: neutral teal → deep blue
-    return new THREE.Color().setHSL(0.58 + 0.05 * t, 0.5 + 0.4 * t, 0.7 - 0.35 * t);
-  } else {
-    // Positive curvature: neutral warm → deep red/orange
-    return new THREE.Color().setHSL(0.08 - 0.06 * t, 0.5 + 0.4 * t, 0.7 - 0.35 * t);
-  }
-  // R=0 → t=0 → HSL(~0.58 or 0.08, 0.5, 0.7) = desaturated light teal/warm
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
 }
 
-/* ═══ Surface color for Christoffel norm (fallback when all R≈0) ═══ */
-function christoffelColor(norm, maxNorm) {
-  const t = Math.min(norm / Math.max(maxNorm, 1e-10), 1);
-  return new THREE.Color().setHSL(0.58 - 0.50 * t, 0.6 + 0.3 * t, 0.7 - 0.3 * t);
-}
-
-/* ═══ Add model ═══ */
-function addModel(data, colorIdx) {
-  const color = MODEL_COLORS[colorIdx % MODEL_COLORS.length];
+/* ═══════════════════════════════════════════════════════════════
+   Add Model
+   ═══════════════════════════════════════════════════════════════ */
+function addModel(data, idx) {
+  const grayVal = MODEL_GRAYS[idx % MODEL_GRAYS.length];
+  const modelGray = new THREE.Color(grayVal, grayVal, grayVal);
+  const modelHex = modelGray.getHex();
   const group = new THREE.Group();
   const cloud = data.manifold?.cloud || [];
   const curvPts = data.curvature?.points || [];
   const allPts = [...cloud, ...curvPts.map(p => p.pos)];
 
-  let cx = 0, cy = 0, cz = 0;
-  for (const p of allPts) { cx += p[0]; cy += p[1]; cz += p[2]; }
-  if (allPts.length) { cx /= allPts.length; cy /= allPts.length; cz /= allPts.length; }
+  let cx=0, cy=0, cz=0;
+  for (const p of allPts) { cx+=p[0]; cy+=p[1]; cz+=p[2]; }
+  if (allPts.length) { cx/=allPts.length; cy/=allPts.length; cz/=allPts.length; }
 
-  let rMin = 0, rMax = 0;
-  for (const p of curvPts) { if (p.R < rMin) rMin = p.R; if (p.R > rMax) rMax = p.R; }
+  let rMin=0, rMax=0;
+  for (const p of curvPts) { if(p.R<rMin)rMin=p.R; if(p.R>rMax)rMax=p.R; }
+  const rRange = Math.abs(rMax - rMin);
+  const useChristoffel = rRange < 1e-8;
+  const norms = curvPts.map(p => p.christoffel_norm||0);
+  const maxNorm = Math.max(...norms, 1e-10);
 
-  // PCA cloud
+  // ── PCA cloud (grayscale points) ──
   const cloudGroup = new THREE.Group();
   cloudGroup.userData.layer = 'cloud';
   if (cloud.length) {
     const geo = new THREE.BufferGeometry();
-    const pos = new Float32Array(cloud.length * 3);
-    const col = new Float32Array(cloud.length * 3);
-    const bc = new THREE.Color(color);
+    const pos = new Float32Array(cloud.length*3);
+    const col = new Float32Array(cloud.length*3);
     for (let i = 0; i < cloud.length; i++) {
-      pos[i*3] = cloud[i][0]-cx; pos[i*3+1] = cloud[i][1]-cy; pos[i*3+2] = cloud[i][2]-cz;
-      col[i*3] = bc.r*0.5; col[i*3+1] = bc.g*0.5; col[i*3+2] = bc.b*0.5;
+      pos[i*3]=cloud[i][0]-cx; pos[i*3+1]=cloud[i][1]-cy; pos[i*3+2]=cloud[i][2]-cz;
+      const g = grayColor(i, cloud.length);
+      col[i*3]=g.r; col[i*3+1]=g.g; col[i*3+2]=g.b;
     }
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
     cloudGroup.add(new THREE.Points(geo, new THREE.PointsMaterial({
-      size: 0.15, vertexColors: true, transparent: true, opacity: 0.4, sizeAttenuation: true, depthWrite: false
+      size: 0.12, vertexColors: true, transparent: true, opacity: 0.5, sizeAttenuation: true, depthWrite: false
     })));
   }
   cloudGroup.visible = false;
   group.add(cloudGroup);
 
-  // Curvature field
+  // ── PCA cloud surface (grayscale hull) ──
+  const cloudSurfGroup = new THREE.Group();
+  cloudSurfGroup.userData.layer = 'cloud-surface';
+  if (cloud.length >= 3) {
+    const cPts = cloud.map(p => [p[0]-cx, p[1]-cy, p[2]-cz]);
+    const cVals = cPts.map((_,i) => i / Math.max(cPts.length-1, 1)); // gradient by index
+    const csGrp = buildDelaunaySurface(cPts, cVals, 1.0,
+      v => { const l = 0.18 + 0.12*v; return new THREE.Color(l,l,l); },
+      Math.min(currentSubdiv, 2), 0, modelHex);
+    if (csGrp) {
+      csGrp.traverse(o => {
+        if (o.material && !o.material.wireframe) { o.material.opacity = 0.18; o.material.color = new THREE.Color(0x222225); o.material.vertexColors = false; }
+        if (o.material?.wireframe) o.material.opacity = 0.04;
+      });
+      cloudSurfGroup.add(csGrp);
+    }
+  }
+  cloudSurfGroup.visible = false;
+  group.add(cloudSurfGroup);
+
+  // ── Curvature field (grayscale spheres, sized by ‖Γ‖) ──
   const curvGroup = new THREE.Group();
   curvGroup.userData.layer = 'curvature';
   curvGroup.visible = false;
   if (curvPts.length) {
     const sGeo = new THREE.SphereGeometry(1, 12, 8);
     const mesh = new THREE.InstancedMesh(sGeo,
-      new THREE.MeshPhongMaterial({ transparent: true, opacity: 0.85, shininess: 40 }),
+      new THREE.MeshPhongMaterial({ transparent: true, opacity: 0.85, shininess: 40, color: 0x888888 }),
       curvPts.length);
     const dummy = new THREE.Object3D();
-    const maxNorm = Math.max(...curvPts.map(p => p.christoffel_norm || 0), 1);
     for (let i = 0; i < curvPts.length; i++) {
       const p = curvPts[i];
       dummy.position.set(p.pos[0]-cx, p.pos[1]-cy, p.pos[2]-cz);
-      dummy.scale.setScalar(0.08 + 0.12 * ((p.christoffel_norm||0) / maxNorm));
+      dummy.scale.setScalar(0.06 + 0.14*((p.christoffel_norm||0)/Math.max(maxNorm,1)));
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
+      // Curvature spheres get curvature color (the ONE exception to BW)
       mesh.setColorAt(i, curvColor(p.R, rMin, rMax));
     }
     mesh.instanceMatrix.needsUpdate = true;
@@ -587,18 +735,18 @@ function addModel(data, colorIdx) {
   }
   group.add(curvGroup);
 
-  // Metric ellipsoids
+  // ── Metric ellipsoids (grayscale wireframe) ──
   const ellGroup = new THREE.Group();
   ellGroup.userData.layer = 'ellipsoids';
   ellGroup.visible = false;
   if (curvPts.length) {
     const eGeo = new THREE.SphereGeometry(1, 16, 12);
-    const eMat = new THREE.MeshPhongMaterial({ color, transparent: true, opacity: 0.2, wireframe: true, depthWrite: false });
+    const eMat = new THREE.MeshPhongMaterial({ color: 0x555555, transparent: true, opacity: 0.15, wireframe: true, depthWrite: false });
     for (const p of curvPts) {
-      if (!p.g_diag || p.g_diag.every(v => v === 0)) continue;
+      if (!p.g_diag || p.g_diag.every(v => v===0)) continue;
       const ell = new THREE.Mesh(eGeo, eMat);
       ell.position.set(p.pos[0]-cx, p.pos[1]-cy, p.pos[2]-cz);
-      const s = 0.3, gd = p.g_diag;
+      const s=0.3, gd=p.g_diag;
       ell.scale.set(s*Math.sqrt(Math.abs(gd[0])+0.01), s*Math.sqrt(Math.abs(gd[1])+0.01), s*Math.sqrt(Math.abs(gd[2])+0.01));
       ell.userData.gDiag = gd;
       ellGroup.add(ell);
@@ -606,7 +754,7 @@ function addModel(data, colorIdx) {
   }
   group.add(ellGroup);
 
-  // Connections
+  // ── Connections (grayscale lines) ──
   const lineGroup = new THREE.Group();
   lineGroup.userData.layer = 'connections';
   lineGroup.visible = false;
@@ -614,33 +762,77 @@ function addModel(data, colorIdx) {
     const lPos = [], lCol = [];
     const pts3 = curvPts.map(p => new THREE.Vector3(p.pos[0]-cx, p.pos[1]-cy, p.pos[2]-cz));
     for (let i = 0; i < pts3.length; i++) {
-      const dists = pts3.map((p, j) => ({ j, d: i===j ? Infinity : pts3[i].distanceTo(p) })).sort((a,b) => a.d-b.d);
-      const c1 = curvColor(curvPts[i].R, rMin, rMax);
+      const dists = pts3.map((p,j) => ({j, d: i===j?Infinity:pts3[i].distanceTo(p)})).sort((a,b)=>a.d-b.d);
       for (let k = 0; k < Math.min(2, dists.length); k++) {
         const j = dists[k].j;
-        const c2 = curvColor(curvPts[j].R, rMin, rMax);
-        lPos.push(pts3[i].x, pts3[i].y, pts3[i].z, pts3[j].x, pts3[j].y, pts3[j].z);
-        lCol.push(c1.r, c1.g, c1.b, c2.r, c2.g, c2.b);
+        lPos.push(pts3[i].x,pts3[i].y,pts3[i].z, pts3[j].x,pts3[j].y,pts3[j].z);
+        lCol.push(0.4,0.4,0.4, 0.3,0.3,0.3);
       }
     }
     const lGeo = new THREE.BufferGeometry();
     lGeo.setAttribute('position', new THREE.Float32BufferAttribute(lPos, 3));
     lGeo.setAttribute('color', new THREE.Float32BufferAttribute(lCol, 3));
     lineGroup.add(new THREE.LineSegments(lGeo, new THREE.LineBasicMaterial({
-      vertexColors: true, transparent: true, opacity: 0.15, depthWrite: false
+      vertexColors: true, transparent: true, opacity: 0.2, depthWrite: false
     })));
   }
   group.add(lineGroup);
 
-  // Manifold surface
-  const surfGroup = buildSurface(curvPts, cx, cy, cz, rMin, rMax, color);
-  if (surfGroup) group.add(surfGroup);
+  // ── Curvature surface (the COLORED surface) ──
+  let surfGroup = null;
+  if (curvPts.length >= 3) {
+    const cPts = curvPts.map(p => [p.pos[0]-cx, p.pos[1]-cy, p.pos[2]-cz]);
+    const cVals = useChristoffel ? norms.slice() : curvPts.map(p => p.R);
+    const cMax = useChristoffel ? maxNorm : Math.max(Math.abs(rMin), Math.abs(rMax));
+    const cFn = useChristoffel
+      ? v => christoffelColor(v, maxNorm)
+      : v => curvColor(v, rMin, rMax);
+    surfGroup = buildDelaunaySurface(cPts, cVals, cMax, cFn, currentSubdiv, currentDisp, modelHex);
+    if (surfGroup) {
+      surfGroup.userData.layer = 'surface';
+      group.add(surfGroup);
+    }
+  }
 
   scene.add(group);
-  const entry = { data, group, cloudGroup, curvGroup, ellGroup, lineGroup, surfGroup, color, rMin, rMax, center: {x:cx,y:cy,z:cz} };
+  const entry = {
+    data, group, cloudGroup, cloudSurfGroup, curvGroup, ellGroup, lineGroup, surfGroup,
+    gray: grayVal, rMin, rMax, useChristoffel, maxNorm,
+    center: {x:cx,y:cy,z:cz}
+  };
   models.push(entry);
   fitCamera();
   return entry;
+}
+
+function rebuildSurfaces() {
+  for (const m of models) {
+    // Remove old surface
+    if (m.surfGroup) {
+      m.group.remove(m.surfGroup);
+      m.surfGroup.traverse(o => { if(o.geometry)o.geometry.dispose(); if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(mt=>mt.dispose()); });
+    }
+    const curvPts = m.data.curvature?.points || [];
+    if (curvPts.length < 3) { m.surfGroup = null; continue; }
+    const cx=m.center.x, cy=m.center.y, cz=m.center.z;
+    const norms = curvPts.map(p => p.christoffel_norm||0);
+    const cPts = curvPts.map(p => [p.pos[0]-cx, p.pos[1]-cy, p.pos[2]-cz]);
+    const cVals = m.useChristoffel ? norms.slice() : curvPts.map(p => p.R);
+    const cMax = m.useChristoffel ? m.maxNorm : Math.max(Math.abs(m.rMin), Math.abs(m.rMax));
+    const cFn = m.useChristoffel
+      ? v => christoffelColor(v, m.maxNorm)
+      : v => curvColor(v, m.rMin, m.rMax);
+    const grayHex = new THREE.Color(m.gray, m.gray, m.gray).getHex();
+    m.surfGroup = buildDelaunaySurface(cPts, cVals, cMax, cFn, currentSubdiv, currentDisp, grayHex);
+    if (m.surfGroup) {
+      m.surfGroup.userData.layer = 'surface';
+      m.surfGroup.visible = document.getElementById('chk-surface').checked;
+      // Wire visibility
+      m.surfGroup.traverse(o => { if(o.userData.isWireframe) o.visible = document.getElementById('chk-wireframe').checked; });
+      m.group.add(m.surfGroup);
+    }
+  }
+  updateStats();
 }
 
 function fitCamera() {
@@ -651,37 +843,40 @@ function fitCamera() {
   const size = box.getSize(new THREE.Vector3());
   const d = Math.max(size.x, size.y, size.z, 1);
   controls.target.copy(center);
-  camera.position.set(center.x + d*1.2, center.y + d*0.8, center.z + d*1.2);
+  camera.position.set(center.x+d*1.2, center.y+d*0.8, center.z+d*1.2);
   controls.update();
 }
 
 function removeModel(i) {
-  if (i < 0 || i >= models.length) return;
+  if (i<0||i>=models.length) return;
   const m = models[i];
   scene.remove(m.group);
-  m.group.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.dispose()); });
+  m.group.traverse(o => { if(o.geometry)o.geometry.dispose(); if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(mt=>mt.dispose()); });
   models.splice(i, 1);
   updateUI();
 }
 
-/* ═══ UI ═══ */
+/* ═══════════════════════════════════════════════════════════════
+   UI
+   ═══════════════════════════════════════════════════════════════ */
 function showPanels(show) {
-  for (const id of ['info-panel','controls-panel','legend-panel','stats-panel'])
+  for (const id of ['info-panel','legend-panel','stats-panel'])
     document.getElementById(id).style.display = show ? 'block' : 'none';
 }
 
 function updateUI() {
+  // Model list
   const list = document.getElementById('model-list');
   list.innerHTML = '';
   for (let i = 0; i < models.length; i++) {
-    const m = models[i], meta = m.data.model || {};
-    const hex = '#' + m.color.toString(16).padStart(6, '0');
+    const m = models[i], meta = m.data.model||{};
+    const gHex = '#' + new THREE.Color(m.gray,m.gray,m.gray).getHexString();
     const e = document.createElement('div');
     e.className = 'model-entry';
-    e.style.borderLeftColor = hex;
-    e.innerHTML = `<div class="swatch" style="background:${hex}"></div>
+    e.style.borderLeftColor = gHex;
+    e.innerHTML = `<div class="swatch" style="background:${gHex}"></div>
       <div style="flex:1">
-        <div class="name">${meta.name || 'Model '+(i+1)}</div>
+        <div class="name">${meta.name||'Model '+(i+1)}</div>
         <div class="meta">${meta.arch||'?'} · d=${meta.dim||'?'} · L=${meta.layers||'?'} · ${meta.quant||'?'}</div>
       </div>`;
     const btn = document.createElement('button');
@@ -689,23 +884,53 @@ function updateUI() {
     e.appendChild(btn);
     list.appendChild(e);
   }
+
+  // Compare bar
+  updateCompareBar();
   updateLegend();
   updateStats();
+}
+
+function updateCompareBar() {
+  const bar = document.getElementById('compare-bar');
+  if (models.length < 1) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  bar.innerHTML = '';
+  for (let i = 0; i < models.length; i++) {
+    const m = models[i], meta = m.data.model||{};
+    const pill = document.createElement('div');
+    pill.className = 'model-pill active';
+    pill.innerHTML = `<div class="dot" style="background:rgb(${Math.round(m.gray*255)},${Math.round(m.gray*255)},${Math.round(m.gray*255)})"></div>${meta.name||'Model '+(i+1)}`;
+    pill.onclick = () => {
+      m.group.visible = !m.group.visible;
+      pill.classList.toggle('active', m.group.visible);
+    };
+    bar.appendChild(pill);
+  }
+  const addBtn = document.createElement('button');
+  addBtn.id = 'add-compare';
+  addBtn.textContent = '+';
+  addBtn.title = 'Add model for comparison';
+  addBtn.onclick = () => document.getElementById('file-input').click();
+  bar.appendChild(addBtn);
 }
 
 function updateLegend() {
   const el = document.getElementById('legend-content');
   if (!models.length) { el.innerHTML = ''; return; }
-  let gMin = 0, gMax = 0;
-  for (const m of models) { if (m.rMin < gMin) gMin = m.rMin; if (m.rMax > gMax) gMax = m.rMax; }
+  let gMin=0, gMax=0;
+  for (const m of models) { if(m.rMin<gMin)gMin=m.rMin; if(m.rMax>gMax)gMax=m.rMax; }
   el.innerHTML = `
     <h3>Scalar Curvature (R)</h3>
-    <div class="color-bar" style="background:linear-gradient(to right,hsl(234,80%,60%),hsl(200,60%,50%),hsl(40,70%,50%),hsl(0,80%,50%))"></div>
-    <div class="color-bar-labels"><span>${gMin.toFixed(2)}</span><span>0</span><span>${gMax.toFixed(4)}</span></div>
+    <div class="color-bar" style="background:linear-gradient(to right,hsl(216,80%,50%),hsl(216,30%,75%),#d0d0d0,hsl(7,30%,75%),hsl(7,80%,50%))"></div>
+    <div class="color-bar-labels"><span>R &lt; 0 (hyperbolic)</span><span>0</span><span>R &gt; 0 (elliptic)</span></div>
+    <p style="font-size:10px;color:#555;margin-top:2px;">Range: [${gMin.toFixed(2)}, ${gMax.toFixed(4)}]</p>
     <h3 style="margin-top:10px">Point Size</h3>
-    <p style="font-size:11px;color:#666">Scaled by Christoffel connection norm ‖Γ‖</p>
+    <p style="font-size:11px;color:#555">∝ Christoffel connection norm ‖Γ‖</p>
     <h3 style="margin-top:10px">Ellipsoids</h3>
-    <p style="font-size:11px;color:#666">Axes = √g<sub>ii</sub> (metric tensor diagonal)</p>`;
+    <p style="font-size:11px;color:#555">Axes = √g<sub>ii</sub> (metric tensor diagonal)</p>
+    <h3 style="margin-top:10px">Colors</h3>
+    <p style="font-size:11px;color:#555">Only the curvature surface/field uses color. Everything else is grayscale.</p>`;
 }
 
 function updateStats() {
@@ -714,113 +939,155 @@ function updateStats() {
   let html = '';
   for (let i = 0; i < models.length; i++) {
     const m = models[i], d = m.data, meta = d.model||{}, curv = d.curvature||{}, man = d.manifold||{};
-    const hex = '#' + m.color.toString(16).padStart(6, '0');
-    html += `<h3 style="color:${hex}">${meta.name||'Model '+(i+1)}</h3>`;
+    html += `<h3 style="color:rgb(${Math.round(m.gray*200)},${Math.round(m.gray*200)},${Math.round(m.gray*200)})">${meta.name||'Model '+(i+1)}</h3>`;
     const sr = (l,v) => `<div class="stat-row"><span class="label">${l}</span><span class="value">${v}</span></div>`;
     html += sr('Intrinsic dim', man.intrinsic_dim ?? '—');
-    html += sr('PCA components', man.pca_components ?? '—');
     html += sr('Cloud points', man.cloud?.length || 0);
     html += sr('Curvature pts', curv.points?.length || 0);
-    html += sr('Mean R', (curv.mean_scalar_curvature ?? 0).toExponential(3));
-    html += sr('Max |R|', Math.max(Math.abs(m.rMin), Math.abs(m.rMax)).toExponential(3));
-    html += sr('‖Γ‖ max', Math.max(...(curv.points||[]).map(p => p.christoffel_norm||0)).toFixed(2));
+    html += sr('Mean R', (curv.mean_scalar_curvature??0).toExponential(3));
+    html += sr('Max |R|', Math.max(Math.abs(m.rMin),Math.abs(m.rMax)).toExponential(3));
+    html += sr('‖Γ‖ max', Math.max(...(curv.points||[]).map(p=>p.christoffel_norm||0)).toFixed(2));
+    if (m.surfGroup) html += sr('Triangles', m.surfGroup.userData.triCount ?? '—');
     if (d.axioms) {
-      html += sr('Axioms', d.axioms.n_axioms ?? '—');
+      html += sr('Axioms', d.axioms.n_axioms??'—');
       html += sr('Consistency', ((d.axioms.consistency_score??0)*100).toFixed(1)+'%');
     }
   }
   el.innerHTML = html;
 }
 
-/* ═══ Controls ═══ */
+/* ═══════════════════════════════════════════════════════════════
+   Controls
+   ═══════════════════════════════════════════════════════════════ */
 function bindControls() {
-  const layers = { 'chk-cloud':'cloud', 'chk-curv':'curvature', 'chk-ellipsoids':'ellipsoids', 'chk-connections':'connections', 'chk-surface':'surface' };
-  for (const [id, layer] of Object.entries(layers)) {
+  // Settings panel toggle
+  document.getElementById('settings-btn').addEventListener('click', () => {
+    document.getElementById('settings-overlay').classList.toggle('open');
+  });
+  document.getElementById('settings-close').addEventListener('click', () => {
+    document.getElementById('settings-overlay').classList.remove('open');
+  });
+
+  // Layer toggles
+  const layerMap = {
+    'chk-cloud': m => m.cloudGroup,
+    'chk-cloud-surface': m => m.cloudSurfGroup,
+    'chk-curv': m => m.curvGroup,
+    'chk-ellipsoids': m => m.ellGroup,
+    'chk-connections': m => m.lineGroup,
+    'chk-surface': m => m.surfGroup,
+  };
+  for (const [id, getter] of Object.entries(layerMap)) {
     document.getElementById(id).addEventListener('change', e => {
-      for (const m of models) {
-        const g = layer==='cloud'?m.cloudGroup : layer==='curvature'?m.curvGroup : layer==='ellipsoids'?m.ellGroup : layer==='surface'?m.surfGroup : m.lineGroup;
-        if (g) g.visible = e.target.checked;
-      }
+      for (const m of models) { const g = getter(m); if(g) g.visible = e.target.checked; }
     });
   }
   document.getElementById('chk-wireframe').addEventListener('change', e => {
     for (const m of models) {
-      if (!m.surfGroup) return;
-      m.surfGroup.traverse(o => { if (o.userData.isWireframe) o.visible = e.target.checked; });
+      if (!m.surfGroup) continue;
+      m.surfGroup.traverse(o => { if(o.userData.isWireframe) o.visible = e.target.checked; });
     }
   });
   document.getElementById('chk-axes').addEventListener('change', e => axesGroup.visible = e.target.checked);
   document.getElementById('chk-grid').addEventListener('change', e => gridHelper.visible = e.target.checked);
 
+  // Subdivision slider → rebuild
+  const subdivEl = document.getElementById('rng-subdiv');
+  subdivEl.addEventListener('input', () => {
+    const v = parseInt(subdivEl.value);
+    document.getElementById('val-subdiv').textContent = v;
+    currentSubdiv = v;
+    rebuildSurfaces();
+  });
+
+  // Displacement slider → rebuild
+  const dispEl = document.getElementById('rng-disp');
+  dispEl.addEventListener('input', () => {
+    const v = parseFloat(dispEl.value);
+    document.getElementById('val-disp').textContent = v.toFixed(2);
+    currentDisp = v;
+    rebuildSurfaces();
+  });
+
+  // Other sliders
   const sliders = {
-    'rng-size': { disp: 'val-size', fn: v => {
+    'rng-size': { disp:'val-size', fn: v => {
       for (const m of models) {
-        m.cloudGroup.traverse(o => { if (o.material?.size !== undefined) o.material.size = v*0.06; });
+        m.cloudGroup.traverse(o => { if(o.material?.size!==undefined) o.material.size = v*0.05; });
         m.curvGroup.traverse(o => {
-          if (!o.isInstancedMesh) return;
-          const pts = m.data.curvature?.points||[], maxN = Math.max(...pts.map(p=>p.christoffel_norm||0),1), d = new THREE.Object3D();
-          for (let i = 0; i < pts.length; i++) {
-            const p = pts[i]; d.position.set(p.pos[0]-m.center.x, p.pos[1]-m.center.y, p.pos[2]-m.center.z);
-            d.scale.setScalar((0.08+0.12*((p.christoffel_norm||0)/maxN))*(v/2.5));
-            d.updateMatrix(); o.setMatrixAt(i, d.matrix);
+          if(!o.isInstancedMesh) return;
+          const pts=m.data.curvature?.points||[], maxN=Math.max(...pts.map(p=>p.christoffel_norm||0),1), d=new THREE.Object3D();
+          for(let i=0;i<pts.length;i++){
+            const p=pts[i]; d.position.set(p.pos[0]-m.center.x,p.pos[1]-m.center.y,p.pos[2]-m.center.z);
+            d.scale.setScalar((0.06+0.14*((p.christoffel_norm||0)/maxN))*(v/2.5));
+            d.updateMatrix(); o.setMatrixAt(i,d.matrix);
           }
           o.instanceMatrix.needsUpdate = true;
         });
       }
     }},
-    'rng-curv-scale': { disp: 'val-curv-scale', fn: v => {
+    'rng-curv-scale': { disp:'val-curv-scale', fn: v => {
       for (const m of models) m.curvGroup.traverse(o => {
-        if (!o.isInstancedMesh) return;
-        const pts = m.data.curvature?.points||[];
-        for (let i = 0; i < pts.length; i++) o.setColorAt(i, curvColor(pts[i].R*v, m.rMin*v, m.rMax*v));
-        if (o.instanceColor) o.instanceColor.needsUpdate = true;
+        if(!o.isInstancedMesh) return;
+        const pts=m.data.curvature?.points||[];
+        for(let i=0;i<pts.length;i++) o.setColorAt(i, curvColor(pts[i].R*v, m.rMin*v, m.rMax*v));
+        if(o.instanceColor) o.instanceColor.needsUpdate = true;
       });
     }},
-    'rng-ellipsoid': { disp: 'val-ellipsoid', fn: v => {
+    'rng-ellipsoid': { disp:'val-ellipsoid', fn: v => {
       for (const m of models) m.ellGroup.traverse(o => {
-        if (o.isMesh && o.userData.gDiag) {
-          const g = o.userData.gDiag;
-          o.scale.set(v*Math.sqrt(Math.abs(g[0])+0.01), v*Math.sqrt(Math.abs(g[1])+0.01), v*Math.sqrt(Math.abs(g[2])+0.01));
-        }
+        if(o.isMesh && o.userData.gDiag){ const g=o.userData.gDiag; o.scale.set(v*Math.sqrt(Math.abs(g[0])+0.01),v*Math.sqrt(Math.abs(g[1])+0.01),v*Math.sqrt(Math.abs(g[2])+0.01)); }
       });
     }},
-    'rng-opacity': { disp: 'val-opacity', fn: v => {
-      for (const m of models) m.curvGroup.traverse(o => { if (o.material) o.material.opacity = v; });
+    'rng-opacity': { disp:'val-opacity', fn: v => {
+      for (const m of models) {
+        m.curvGroup.traverse(o => { if(o.material) o.material.opacity = v; });
+        if(m.surfGroup) m.surfGroup.traverse(o => { if(o.material && !o.material.wireframe) o.material.opacity = v*0.85; });
+      }
     }},
   };
-  for (const [id, cfg] of Object.entries(sliders)) {
+  for (const [id,cfg] of Object.entries(sliders)) {
     const el = document.getElementById(id);
-    el.addEventListener('input', () => { const v = parseFloat(el.value); document.getElementById(cfg.disp).textContent = v.toFixed(1); cfg.fn(v); });
+    el.addEventListener('input', () => { const v=parseFloat(el.value); document.getElementById(cfg.disp).textContent=v.toFixed(1); cfg.fn(v); });
   }
 
+  // View mode buttons
   document.getElementById('view-mode-btns').addEventListener('click', e => {
     if (!e.target.matches('button')) return;
     document.querySelectorAll('#view-mode-btns button').forEach(b => b.classList.remove('active'));
     e.target.classList.add('active');
     const mode = e.target.dataset.mode;
-    const chks = { cloud: document.getElementById('chk-cloud'), curv: document.getElementById('chk-curv'), ell: document.getElementById('chk-ellipsoids') };
-    const surf = document.getElementById('chk-surface');
-    const wire = document.getElementById('chk-wireframe');
-    const conn = document.getElementById('chk-connections');
-    if (mode==='surface') { chks.cloud.checked=false; chks.curv.checked=false; chks.ell.checked=false; surf.checked=true; wire.checked=true; conn.checked=false; }
-    else if (mode==='curvature') { chks.cloud.checked=true; chks.curv.checked=true; chks.ell.checked=false; surf.checked=false; wire.checked=false; conn.checked=true; }
-    else if (mode==='metric') { chks.cloud.checked=false; chks.curv.checked=true; chks.ell.checked=true; surf.checked=false; wire.checked=false; conn.checked=false; }
-    else { chks.cloud.checked=true; chks.curv.checked=false; chks.ell.checked=false; surf.checked=false; wire.checked=false; conn.checked=false; }
-    [chks.cloud, chks.curv, chks.ell, surf, wire, conn].forEach(c => c.dispatchEvent(new Event('change')));
+    const ids = ['chk-cloud','chk-cloud-surface','chk-curv','chk-ellipsoids','chk-surface','chk-wireframe','chk-connections'];
+    const presets = {
+      surface:    [false,false,false,false,true,true,false],
+      curvature:  [true,false,true,false,false,false,true],
+      metric:     [false,false,true,true,false,false,false],
+      cloud:      [true,true,false,false,false,false,false],
+    };
+    const vals = presets[mode] || presets.surface;
+    ids.forEach((id,i) => {
+      const el = document.getElementById(id);
+      el.checked = vals[i];
+      el.dispatchEvent(new Event('change'));
+    });
   });
 
+  // Add model button
   document.getElementById('add-model-btn').addEventListener('click', () => document.getElementById('file-input').click());
 }
 
-/* ═══ Tooltip ═══ */
+/* ═══════════════════════════════════════════════════════════════
+   Tooltip
+   ═══════════════════════════════════════════════════════════════ */
 function initTooltip() {
   const tip = document.createElement('div');
-  tip.style.cssText = 'position:fixed;z-index:200;display:none;background:rgba(10,10,20,0.95);border:1px solid rgba(100,120,255,0.3);border-radius:6px;padding:8px 12px;font-size:11px;color:#c8c8d0;pointer-events:none;max-width:250px;line-height:1.5;font-family:inherit';
+  tip.className = 'tip';
   document.body.appendChild(tip);
   const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
 
   renderer.domElement.addEventListener('mousemove', e => {
-    mouse.x = (e.clientX/innerWidth)*2-1; mouse.y = -(e.clientY/innerHeight)*2+1;
+    mouse.x = (e.clientX/innerWidth)*2-1;
+    mouse.y = -(e.clientY/innerHeight)*2+1;
     ray.setFromCamera(mouse, camera);
     let found = false;
     for (const m of models) {
@@ -831,8 +1098,15 @@ function initTooltip() {
           const idx = hits[0].instanceId, pts = m.data.curvature?.points||[];
           if (idx < pts.length) {
             const p = pts[idx];
-            tip.innerHTML = `<strong style="color:#8090ff">${m.data.model?.name||'Model'}</strong><br>Point ${idx}<br>R = ${p.R.toExponential(4)}<br>‖Γ‖ = ${(p.christoffel_norm||0).toFixed(4)}<br>g = [${(p.g_diag||[]).map(v=>v.toFixed(3)).join(', ')}]<br>pos = (${p.pos.map(v=>v.toFixed(3)).join(', ')})`;
-            tip.style.display = 'block'; tip.style.left = (e.clientX+16)+'px'; tip.style.top = (e.clientY+16)+'px';
+            tip.innerHTML = `<strong style="color:#bbb">${m.data.model?.name||'Model'}</strong><br>
+              Point ${idx}<br>
+              <span style="color:#aaa">R</span> = ${p.R.toExponential(4)}<br>
+              <span style="color:#aaa">‖Γ‖</span> = ${(p.christoffel_norm||0).toFixed(4)}<br>
+              <span style="color:#aaa">g</span> = [${(p.g_diag||[]).map(v=>v.toFixed(3)).join(', ')}]<br>
+              <span style="color:#aaa">pos</span> = (${p.pos.map(v=>v.toFixed(3)).join(', ')})`;
+            tip.style.display = 'block';
+            tip.style.left = (e.clientX+16)+'px';
+            tip.style.top = (e.clientY+16)+'px';
             found = true;
           }
         }
@@ -842,7 +1116,83 @@ function initTooltip() {
   });
 }
 
-/* ═══ File handling ═══ */
+/* ═══════════════════════════════════════════════════════════════
+   Walkthrough (step-by-step inference example)
+   ═══════════════════════════════════════════════════════════════ */
+const walkthroughSteps = [
+  {
+    title: 'Step 1: Tokenization',
+    body: 'A prompt like "The capital of France is" gets split into tokens — subword pieces the model understands. Each token is mapped to an embedding vector, a point in the high-dimensional weight space. The PCA cloud you see represents projections of these weight vectors into 3D.'
+  },
+  {
+    title: 'Step 2: Embedding → Manifold',
+    body: 'Each token embedding lives on the Riemannian manifold defined by the model\'s weights. The metric tensor g at each point tells us how distances are measured locally — the ellipsoids show this stretching. In flat regions (R≈0), the geometry is Euclidean.'
+  },
+  {
+    title: 'Step 3: Layer-by-Layer Transport',
+    body: 'As the token passes through each transformer layer, its representation is transformed. Geometrically, it\'s being parallel-transported along the manifold. The Christoffel symbols Γ govern this transport — higher ‖Γ‖ means the path curves more sharply.'
+  },
+  {
+    title: 'Step 4: Attention as Curvature',
+    body: 'Self-attention computes relationships between all tokens. Regions of high scalar curvature |R| correspond to weight-space areas where the model makes strong representational changes. The surface you see — colored blue (R<0, saddle-like) or red (R>0, sphere-like) — maps this out.'
+  },
+  {
+    title: 'Step 5: Prediction',
+    body: 'After all layers, the final representation is projected to vocabulary space, producing a probability distribution over next tokens. The model predicts "Paris." The manifold captures the static geometry — the terrain over which every inference path travels.'
+  },
+];
+let wtStep = 0;
+
+function initWalkthrough() {
+  const panel = document.getElementById('walkthrough-panel');
+  const title = document.getElementById('wt-title');
+  const body = document.getElementById('wt-body');
+  const dots = document.getElementById('wt-dots');
+
+  function render() {
+    const s = walkthroughSteps[wtStep];
+    title.textContent = s.title;
+    body.textContent = s.body;
+    dots.innerHTML = '';
+    for (let i = 0; i < walkthroughSteps.length; i++) {
+      const d = document.createElement('div');
+      d.className = 'step-dot' + (i===wtStep ? ' active' : '');
+      dots.appendChild(d);
+    }
+  }
+
+  document.getElementById('wt-prev').addEventListener('click', () => {
+    if (wtStep > 0) { wtStep--; render(); }
+  });
+  document.getElementById('wt-next').addEventListener('click', () => {
+    if (wtStep < walkthroughSteps.length-1) { wtStep++; render(); }
+  });
+  document.getElementById('wt-close').addEventListener('click', () => {
+    panel.classList.remove('open');
+  });
+
+  // Trigger from help panel or auto
+  window.startWalkthrough = () => {
+    document.getElementById('help-overlay').classList.remove('open');
+    wtStep = 0;
+    render();
+    panel.classList.add('open');
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Help overlay
+   ═══════════════════════════════════════════════════════════════ */
+function initHelp() {
+  const overlay = document.getElementById('help-overlay');
+  document.getElementById('help-btn').addEventListener('click', () => overlay.classList.add('open'));
+  overlay.querySelector('.close-help').addEventListener('click', () => overlay.classList.remove('open'));
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   File handling
+   ═══════════════════════════════════════════════════════════════ */
 function loadJSON(data) {
   addModel(data, models.length);
   showPanels(true);
@@ -871,31 +1221,40 @@ async function fetchModel(url) {
   }
 }
 
-/* ═══ Drag & Drop ═══ */
+/* ═══════════════════════════════════════════════════════════════
+   Drag & Drop
+   ═══════════════════════════════════════════════════════════════ */
 function initDragDrop() {
   const dz = document.getElementById('drop-zone');
   let dc = 0;
   document.addEventListener('dragenter', e => { e.preventDefault(); dc++; dz.classList.add('active'); });
-  document.addEventListener('dragleave', e => { e.preventDefault(); dc--; if (dc<=0) { dz.classList.remove('active'); dc=0; } });
-  document.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+  document.addEventListener('dragleave', e => { e.preventDefault(); dc--; if(dc<=0){dz.classList.remove('active');dc=0;} });
+  document.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect='copy'; });
   document.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('active'); dc=0; handleFiles(e.dataTransfer.files); });
   document.getElementById('file-input').addEventListener('change', e => handleFiles(e.target.files));
 }
 
-/* ═══ Init ═══ */
+/* ═══════════════════════════════════════════════════════════════
+   Init
+   ═══════════════════════════════════════════════════════════════ */
 initScene();
 bindControls();
 initDragDrop();
 initTooltip();
+initHelp();
+initWalkthrough();
 animate();
 
-// Auto-load from query param ?m=slug or from hash
+// Auto-load from ?m=slug
 const params = new URLSearchParams(location.search);
-const modelSlug = params.get('m');
-if (modelSlug) {
-  // Resolve data path relative to viewer location
+const slugs = params.getAll('m');
+if (slugs.length === 0 && params.has('m')) slugs.push(params.get('m'));
+// Also support ?m=a&m=b for multi-model compare
+if (slugs.length > 0) {
   const base = document.baseURI.replace(/\/[^/]*$/, '/');
-  fetchModel(base + 'data/' + modelSlug + '.json');
+  for (const slug of slugs) {
+    fetchModel(base + 'data/' + slug + '.json');
+  }
 } else {
   showPanels(false);
 }
