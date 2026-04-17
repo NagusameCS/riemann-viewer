@@ -140,6 +140,25 @@ footer a { color: var(--accent2); }
       <a href="data/gemma-4-e2b.json" class="btn" download>JSON ↓</a>
     </div>
   </div>
+  <!-- Try It Yourself -->
+  <div class="card" style="border-color: rgba(80,120,255,0.2); background: linear-gradient(135deg, rgba(20,24,50,0.9), rgba(14,14,24,0.9));">
+    <div class="tag" style="color:#5577aa;">Interactive</div>
+    <h2 style="color:#c0c8ff;">Text → Tensor &amp; Manifold</h2>
+    <div class="arch" style="color:#5577cc;">Type anything · See it as geometry</div>
+    <div class="stats">
+      <span class="label">Embedding dim</span><span class="value">24</span>
+      <span class="label">Projection</span><span class="value">PCA → 3D</span>
+      <span class="label">Pipeline</span><span class="value">embed + attn + norm</span>
+      <span class="label">Curvature</span><span class="value">discrete Laplacian</span>
+    </div>
+    <p style="font-size:12px; color:#444; line-height:1.6; margin-bottom:16px;">
+      Type any text and watch it become a Riemannian manifold in real time — embedding tensor heatmap, cosine similarity matrix, and 3D curvature surface with token labels.
+    </p>
+    <div class="btn-row">
+      <a href="text-manifold.html" class="btn primary" style="border-color:rgba(80,120,255,0.35);color:#8899ff;">Open Interactive Viewer →</a>
+    </div>
+  </div>
+
 
 </section>
 

@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Text → Tensor & Manifold</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #06060c; color: #c0c0c8;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+}
+
+/* ─── Header ─── */
+header {
+  padding: 10px 18px; flex-shrink: 0;
+  display: flex; align-items: center; gap: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  background: rgba(10,10,22,0.6);
+}
+header a { font-size: 11px; color: #555; text-decoration: none; border: 1px solid rgba(255,255,255,0.06); padding: 3px 9px; border-radius: 5px; white-space: nowrap; }
+header a:hover { color: #888; }
+header h1 { font-size: 15px; font-weight: 500; color: #9090a8; flex: 1; }
+header p { font-size: 11px; color: #383844; max-width: 360px; line-height: 1.4; }
+#help-toggle { background: none; border: 1px solid rgba(255,255,255,0.07); border-radius: 5px; color: #444; font-size: 12px; padding: 3px 10px; cursor: pointer; flex-shrink: 0; }
+#help-toggle:hover { color: #888; }
+
+/* ─── Input bar ─── */
+#input-bar {
+  padding: 10px 18px; flex-shrink: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  display: flex; gap: 10px; align-items: center;
+}
+#text-input {
+  flex: 1; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px; padding: 9px 14px; color: #c0c0c8; font-size: 14px;
+  font-family: inherit; outline: none; transition: border-color 0.18s;
+}
+#text-input:focus { border-color: rgba(120,140,255,0.3); }
+#text-input::placeholder { color: #2a2a38; }
+.mode-toggle { display: flex; gap: 3px; flex-shrink: 0; }
+.mode-btn {
+  padding: 5px 11px; font-size: 11px; border-radius: 4px; cursor: pointer;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+  color: #555; font-family: inherit; transition: all 0.15s;
+}
+.mode-btn.active { background: rgba(255,255,255,0.07); color: #aaa; border-color: rgba(255,255,255,0.14); }
+#token-count { font-size: 11px; color: #333; white-space: nowrap; min-width: 60px; text-align: right; }
+.example-btns { display: flex; gap: 4px; flex-shrink: 0; }
+.ex-btn {
+  padding: 5px 9px; font-size: 10px; border-radius: 4px; cursor: pointer;
+  background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+  color: #444; font-family: inherit; white-space: nowrap;
+}
+.ex-btn:hover { color: #888; border-color: rgba(255,255,255,0.1); }
+
+/* ─── Main viz area ─── */
+#viz-area { flex: 1; display: flex; min-height: 0; }
+
+/* ─── Left: Tensor panel ─── */
+#tensor-panel {
+  width: 420px; flex-shrink: 0;
+  display: flex; flex-direction: column;
+  border-right: 1px solid rgba(255,255,255,0.04);
+}
+.panel-header {
+  padding: 10px 14px 8px;
+  display: flex; align-items: center; gap: 0; flex-shrink: 0;
+}
+.panel-header h2 { font-size: 10px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.5px; flex: 1; }
+.panel-tabs { display: flex; gap: 3px; }
+.tab-btn {
+  padding: 3px 9px; font-size: 10px; border-radius: 3px; cursor: pointer;
+  background: none; border: 1px solid transparent; color: #444; font-family: inherit;
+}
+.tab-btn.active { border-color: rgba(255,255,255,0.1); color: #999; background: rgba(255,255,255,0.04); }
+#tensor-scroll { flex: 1; overflow-y: auto; overflow-x: auto; padding: 4px 10px 10px; }
+#tensor-scroll::-webkit-scrollbar { width: 3px; height: 3px; }
+#tensor-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+#tensor-canvas { display: none; cursor: crosshair; }
+#attn-canvas { display: none; cursor: crosshair; }
+#placeholder {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100%; color: #1e1e28; user-select: none; gap: 10px;
+}
+#placeholder p { font-size: 12px; text-align: center; line-height: 1.6; }
+.panel-footer {
+  padding: 8px 14px; border-top: 1px solid rgba(255,255,255,0.04);
+  flex-shrink: 0; display: flex; align-items: center; gap: 8px;
+}
+.cscale { display: flex; align-items: center; gap: 6px; }
+.cscale-bar { width: 70px; height: 7px; border-radius: 2px; }
+.cscale-label { font-size: 10px; color: #2e2e3a; }
+.cscale-desc { font-size: 10px; color: #2a2a38; margin-left: 4px; }
+
+/* ─── Right: Manifold panel ─── */
+#manifold-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+#manifold-container { flex: 1; position: relative; min-height: 0; overflow: hidden; }
+#manifold-container canvas { display: block; width: 100% !important; height: 100% !important; }
+
+/* ─── Stats bar ─── */
+#stats-bar {
+  padding: 7px 18px; border-top: 1px solid rgba(255,255,255,0.04);
+  display: flex; gap: 18px; align-items: center; flex-shrink: 0; display: none;
+}
+.stat-item { display: flex; gap: 5px; align-items: baseline; }
+.stat-item .slabel { font-size: 10px; color: #2a2a38; }
+.stat-item .svalue { font-size: 12px; color: #666; font-variant-numeric: tabular-nums; }
+.stat-sep { width: 1px; height: 12px; background: rgba(255,255,255,0.05); }
+
+/* ─── Help overlay ─── */
+#help-overlay {
+  position: fixed; inset: 0; z-index: 100; display: none;
+  align-items: center; justify-content: center;
+  background: rgba(6,6,12,0.9); backdrop-filter: blur(8px);
+}
+#help-overlay.open { display: flex; }
+#help-content {
+  max-width: 600px; width: 90%; max-height: 82vh; overflow-y: auto;
+  background: rgba(14,14,24,0.98); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px; padding: 30px; position: relative;
+}
+#help-content h2 { font-size: 16px; color: #b0b0c0; margin-bottom: 16px; font-weight: 500; }
+#help-content h3 { font-size: 12px; color: #888; margin: 14px 0 5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+#help-content p, #help-content li { font-size: 12px; color: #666; line-height: 1.7; }
+#help-content ul, #help-content ol { padding-left: 18px; }
+#help-content code { background: rgba(255,255,255,0.06); padding: 1px 5px; border-radius: 3px; font-size: 11px; color: #999; }
+.term { color: #a0a0b8; font-weight: 500; }
+.close-help { position: absolute; top: 14px; right: 16px; background: none; border: none; color: #555; font-size: 18px; cursor: pointer; }
+.close-help:hover { color: #aaa; }
+
+/* ─── Tooltip ─── */
+.tip {
+  position: fixed; z-index: 200; pointer-events: none; display: none;
+  background: rgba(10,10,20,0.97); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px; padding: 8px 12px; font-size: 11px; color: #999;
+  max-width: 220px; line-height: 1.6; backdrop-filter: blur(4px);
+}
+</style>
+</head>
+<body>
+
+<header>
+  <a href="./">← Models</a>
+  <h1>Text → Tensor &amp; Manifold</h1>
+  <p>Watch text become geometry — embedding tensor and Riemannian manifold, live</p>
+  <button id="help-toggle">What is this?</button>
+</header>
+
+<div id="input-bar">
+  <input id="text-input" type="text" placeholder="Type anything… e.g. 'the capital of France is Paris'" autocomplete="off" spellcheck="false">
+  <div class="mode-toggle">
+    <button class="mode-btn active" data-mode="word">Words</button>
+    <button class="mode-btn" data-mode="char">Chars</button>
+  </div>
+  <div class="example-btns">
+    <button class="ex-btn" data-text="the quick brown fox jumps">Example 1</button>
+    <button class="ex-btn" data-text="transformer attention mechanisms encode semantic relationships">Example 2</button>
+    <button class="ex-btn" data-text="loss landscape curvature determines generalization">Example 3</button>
+  </div>
+  <div id="token-count">—</div>
+</div>
+
+<div id="viz-area">
+
+  <!-- Left: Tensor / Attention heatmaps -->
+  <div id="tensor-panel">
+    <div class="panel-header">
+      <h2>Embeddings</h2>
+      <div class="panel-tabs">
+        <button class="tab-btn active" data-tab="embed">Tensor</button>
+        <button class="tab-btn" data-tab="attn">Similarity</button>
+      </div>
+    </div>
+    <div id="tensor-scroll">
+      <div id="placeholder">
+        <p>Type text above<br>to begin</p>
+      </div>
+      <canvas id="tensor-canvas"></canvas>
+      <canvas id="attn-canvas"></canvas>
+    </div>
+    <div class="panel-footer">
+      <div class="cscale">
+        <span class="cscale-label">−1</span>
+        <div class="cscale-bar" id="cscale-bar"></div>
+        <span class="cscale-label">+1</span>
+      </div>
+      <span class="cscale-desc" id="scale-desc">embedding value</span>
+    </div>
+  </div>
+
+  <!-- Right: 3D manifold -->
+  <div id="manifold-panel">
+    <div class="panel-header">
+      <h2>Riemannian Manifold <span style="font-weight:400;color:#2e2e3a;font-size:9px;margin-left:6px;">3D PCA projection · orbit to rotate</span></h2>
+    </div>
+    <div id="manifold-container"></div>
+  </div>
+
+</div>
+
+<!-- Stats bar -->
+<div id="stats-bar">
+  <div class="stat-item"><span class="slabel">Tokens</span><span class="svalue" id="st-n">—</span></div>
+  <div class="stat-sep"></div>
+  <div class="stat-item"><span class="slabel">Mean R</span><span class="svalue" id="st-meanR">—</span></div>
+  <div class="stat-item"><span class="slabel">Max |R|</span><span class="svalue" id="st-maxR">—</span></div>
+  <div class="stat-sep"></div>
+  <div class="stat-item"><span class="slabel">Path length</span><span class="svalue" id="st-path">—</span></div>
+  <div class="stat-item"><span class="slabel">Variance explained</span><span class="svalue" id="st-var">—</span></div>
+  <div class="stat-sep"></div>
+  <div class="stat-item"><span class="slabel">Embedding dim</span><span class="svalue">24</span></div>
+</div>
+
+<!-- Help overlay -->
+<div id="help-overlay">
+  <div id="help-content">
+    <button class="close-help">✕</button>
+    <h2>Text → Tensor &amp; Manifold — Guide</h2>
+
+    <h3>What is happening?</h3>
+    <p>Your text is passed through a <span class="term">deterministic embedding pipeline</span> — the same kind of computation that happens inside every large language model. Each token (word or character) is mapped to a 24-dimensional vector, mixed with its neighbors via a simplified attention mechanism, and then projected to 3D via PCA to visualize as a Riemannian manifold.</p>
+
+    <h3>Embedding Tensor (left panel)</h3>
+    <p>A grid where each <strong>row = one token</strong> and each <strong>column = one embedding dimension</strong> (0–23). Color = value: <strong style="color:#5577ff">blue</strong> = negative, <strong style="color:#ffff00">yellow</strong> = near zero, <strong style="color:#ff3333">red</strong> = positive. This is exactly what a real model's hidden state looks like after an embedding layer + layer norm.</p>
+
+    <h3>Similarity Matrix (Similarity tab)</h3>
+    <p>The <span class="term">cosine similarity</span> between every pair of token embeddings — how similar two tokens are in the embedding space. Diagonal = 1.0 (self-similarity). Bright off-diagonal entries mean the model "sees" those words as related.</p>
+
+    <h3>Riemannian Manifold (right panel)</h3>
+    <p>The 3D projection of the token embeddings forms a <span class="term">point cloud</span>. A Delaunay triangulation builds a surface through these points. The <span class="term">scalar curvature R</span> is computed as the discrete Laplacian of the embedding trajectory:</p>
+    <ul>
+      <li><strong style="color:#5577ff">Blue</strong> — R &lt; 0: saddle-like (hyperbolic), token is bending toward the center</li>
+      <li><strong style="color:#ffff00">Yellow</strong> — R ≈ 0: flat, smooth transition</li>
+      <li><strong style="color:#ff4444">Red</strong> — R &gt; 0: sphere-like (elliptic), token is on an outer curvature peak</li>
+    </ul>
+    <p>The <strong>glowing tube</strong> traces the sequence path — where the "token" travels through embedding space from first to last word.</p>
+
+    <h3>What is actually computed?</h3>
+    <ol>
+      <li><strong>Base embedding</strong>: Each character's unicode code point is hashed deterministically into a 24-dim vector. Words are averaged over their characters.</li>
+      <li><strong>Positional encoding</strong>: Sinusoidal position signals (like real transformers use) are added.</li>
+      <li><strong>Layer norm</strong>: Embeddings are normalized to zero mean, unit variance.</li>
+      <li><strong>Context mixing</strong>: Each token attends to all others via a simplified dot-product attention (σ-weighted sum), capturing semantic neighborhood.</li>
+      <li><strong>PCA</strong>: The 24-dim space is projected to 3D via power-iteration PCA. The variance explained shows how much geometric structure survives the projection.</li>
+      <li><strong>Curvature</strong>: R<sub>i</sub> = ‖e<sub>i+1</sub> − 2e<sub>i</sub> + e<sub>i−1</sub>‖ (discrete Laplacian). Sign: positive if the token lies on the outer shell, negative if near the centroid.</li>
+    </ol>
+
+    <h3>Controls</h3>
+    <ul>
+      <li><strong>Left-drag</strong>: Rotate the manifold</li>
+      <li><strong>Scroll</strong>: Zoom in/out</li>
+      <li><strong>Right-drag</strong>: Pan</li>
+      <li><strong>Hover tensor</strong>: See exact embedding value for token × dimension</li>
+    </ul>
+  </div>
+</div>
+
+<div class="tip" id="tooltip"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+/* ══════════════════════════════════════════════════════════════
+   EMBEDDING ENGINE
+   ══════════════════════════════════════════════════════════════ */
+const DIM = 24;
+
+function hash32(x) {
+  x = Math.imul((x ^ (x >>> 16)) >>> 0, 0x45d9f3b) >>> 0;
+  x = Math.imul((x ^ (x >>> 16)) >>> 0, 0x45d9f3b) >>> 0;
+  return ((x ^ (x >>> 16)) | 0);
+}
+
+function charEmbed(c) {
+  const code = c.charCodeAt(0);
+  const v = new Float32Array(DIM);
+  for (let d = 0; d < DIM; d++) {
+    const h = hash32(code * 1999 + d * 127 + 0x45fa3b) / 1073741824;
+    v[d] = Math.tanh(h * 2.5);
+  }
+  return v;
+}
+
+function tokenEmbed(tok) {
+  if (!tok.length) return new Float32Array(DIM);
+  const v = new Float32Array(DIM);
+  for (const c of tok) { const ce = charEmbed(c); for (let d = 0; d < DIM; d++) v[d] += ce[d]; }
+  for (let d = 0; d < DIM; d++) v[d] /= tok.length;
+  // Length feature
+  v[DIM - 1] = Math.tanh(tok.length / 6.0 - 0.8);
+  return v;
+}
+
+function addPositional(v, pos) {
+  const out = v.slice();
+  for (let d = 0; d < DIM; d += 2) {
+    const freq = 1.0 / Math.pow(1000, d / DIM);
+    out[d]     += 0.38 * Math.sin(pos * freq);
+    if (d + 1 < DIM) out[d + 1] += 0.38 * Math.cos(pos * freq);
+  }
+  return out;
+}
+
+function layerNorm(v) {
+  const mean = v.reduce((a, b) => a + b, 0) / v.length;
+  const c = v.map(x => x - mean);
+  const std = Math.sqrt(c.reduce((a, b) => a + b * b, 0) / c.length + 1e-8);
+  return new Float32Array(c.map(x => x / std));
+}
+
+// Simplified full-sequence dot-product attention
+function contextMix(embeddings) {
+  const n = embeddings.length, sqD = Math.sqrt(DIM);
+  return embeddings.map((ei, i) => {
+    // Compute attention weights
+    const scores = embeddings.map((ej, j) => {
+      let dot = 0;
+      for (let d = 0; d < DIM; d++) dot += ei[d] * ej[d];
+      return dot / sqD;
+    });
+    // Softmax
+    const maxS = Math.max(...scores);
+    const exp = scores.map(s => Math.exp(Math.min(s - maxS, 20)));
+    const sum = exp.reduce((a, b) => a + b, 0);
+    const attn = exp.map(e => e / sum);
+    // Weighted sum (residual connection: 0.5 base + 0.5 context)
+    const result = new Float32Array(DIM);
+    for (let d = 0; d < DIM; d++) result[d] = 0.45 * ei[d];
+    for (let j = 0; j < n; j++) for (let d = 0; d < DIM; d++) result[d] += 0.55 * attn[j] * embeddings[j][d];
+    return result;
+  });
+}
+
+function computeEmbeddings(tokens) {
+  let e = tokens.map((t, i) => addPositional(tokenEmbed(t), i));
+  e = e.map(layerNorm);
+  if (tokens.length > 1) e = contextMix(e);
+  e = e.map(layerNorm);
+  return e;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PCA (power iteration, 3 components)
+   ══════════════════════════════════════════════════════════════ */
+function pca3(embeddings) {
+  const n = embeddings.length;
+  if (n < 2) return { projected: embeddings.map(() => [0, 0, 0]), explainedFrac: 0 };
+  const mean = new Float32Array(DIM);
+  for (const e of embeddings) for (let d = 0; d < DIM; d++) mean[d] += e[d] / n;
+  const centered = embeddings.map(e => { const c = new Float32Array(DIM); for (let d = 0; d < DIM; d++) c[d] = e[d] - mean[d]; return c; });
+
+  const components = [], variances = [];
+  let residual = centered.map(c => c.slice());
+
+  for (let k = 0; k < 3; k++) {
+    let v = new Float32Array(DIM);
+    for (let d = 0; d < DIM; d++) v[d] = Math.sin(d * 1.7 + k * 3.14159 + 0.3);
+    let vn = Math.sqrt(v.reduce((a, b) => a + b * b, 0));
+    for (let d = 0; d < DIM; d++) v[d] /= vn;
+    for (let iter = 0; iter < 35; iter++) {
+      const Xv = residual.map(r => r.reduce((s, rd, d) => s + rd * v[d], 0));
+      const nv = new Float32Array(DIM);
+      for (let i = 0; i < n; i++) for (let d = 0; d < DIM; d++) nv[d] += Xv[i] * residual[i][d];
+      vn = Math.sqrt(nv.reduce((a, b) => a + b * b, 0));
+      if (vn < 1e-12) break;
+      for (let d = 0; d < DIM; d++) v[d] = nv[d] / vn;
+    }
+    components.push(v);
+    variances.push(vn / n);
+    for (let i = 0; i < n; i++) {
+      const p = residual[i].reduce((s, rd, d) => s + rd * v[d], 0);
+      for (let d = 0; d < DIM; d++) residual[i][d] -= p * v[d];
+    }
+  }
+
+  const totalVar = centered.reduce((s, c) => s + c.reduce((a, b) => a + b * b, 0), 0) / n;
+  const explainedFrac = variances.reduce((a, b) => a + b, 0) / Math.max(totalVar, 1e-10);
+  const projected = centered.map(c => [
+    components[0].reduce((s, vd, d) => s + c[d] * vd, 0),
+    components[1].reduce((s, vd, d) => s + c[d] * vd, 0),
+    components[2].reduce((s, vd, d) => s + c[d] * vd, 0),
+  ]);
+  return { projected, explainedFrac };
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CURVATURE (discrete Laplacian along sequence)
+   ══════════════════════════════════════════════════════════════ */
+function computeCurvature(embeddings, projected) {
+  const n = embeddings.length;
+  const cx = projected.reduce((s, p) => s + p[0], 0) / n;
+  const cy = projected.reduce((s, p) => s + p[1], 0) / n;
+  const cz = projected.reduce((s, p) => s + p[2], 0) / n;
+  const maxDist = Math.max(...projected.map(p => Math.sqrt((p[0]-cx)**2+(p[1]-cy)**2+(p[2]-cz)**2)), 1e-10);
+
+  return embeddings.map((e, i) => {
+    let kappa;
+    if (i === 0 || i === n - 1) {
+      const d = Math.sqrt((projected[i][0]-cx)**2+(projected[i][1]-cy)**2+(projected[i][2]-cz)**2) / maxDist;
+      kappa = 0.2 * (d - 0.5);
+      return kappa;
+    }
+    let lap2 = 0;
+    for (let d = 0; d < DIM; d++) { const dd = embeddings[i+1][d] - 2*embeddings[i][d] + embeddings[i-1][d]; lap2 += dd * dd; }
+    kappa = Math.sqrt(lap2);
+    const dist = Math.sqrt((projected[i][0]-cx)**2+(projected[i][1]-cy)**2+(projected[i][2]-cz)**2) / maxDist;
+    return kappa * (dist > 0.42 ? 1 : -1);
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SIMILARITY MATRIX (cosine)
+   ══════════════════════════════════════════════════════════════ */
+function computeSimilarity(embeddings) {
+  const n = embeddings.length;
+  const norms = embeddings.map(e => Math.sqrt(e.reduce((a, b) => a + b * b, 0)));
+  return embeddings.map((ei, i) => embeddings.map((ej, j) => {
+    let dot = 0;
+    for (let d = 0; d < DIM; d++) dot += ei[d] * ej[d];
+    return dot / Math.max(norms[i] * norms[j], 1e-10);
+  }));
+}
+
+/* ══════════════════════════════════════════════════════════════
+   COLOR
+   ══════════════════════════════════════════════════════════════ */
+function curvColor(R, rMin, rMax) {
+  const range = Math.max(Math.abs(rMin), Math.abs(rMax), 1e-10);
+  const t = Math.min(Math.abs(R) / range, 1);
+  if (R <= 0) return new THREE.Color(1-t, 1-t, t);
+  return new THREE.Color(1, 1-t, 0);
+}
+
+function valColor(v) {
+  // v in [-1, 1] → blue-yellow-red
+  const t = Math.max(-1, Math.min(1, v));
+  if (t <= 0) { const s = -t; return [Math.round((1-s)*255), Math.round((1-s)*255), Math.round(s*255)]; }
+  return [255, Math.round((1-t)*255), 0];
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TENSOR HEATMAP
+   ══════════════════════════════════════════════════════════════ */
+const CW = 11, CH = 20, PAD = 2, LPAD = 94, TOP = 18;
+
+function renderTensor(canvas, tokens, embeddings, hlRow) {
+  const n = tokens.length;
+  const W = LPAD + DIM * (CW + PAD) + PAD;
+  const H = TOP + n * (CH + PAD) + PAD;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  // Dim axis labels
+  ctx.font = '8px "Segoe UI", system-ui';
+  ctx.fillStyle = '#2a2a38'; ctx.textAlign = 'center';
+  for (let d = 0; d < DIM; d += 4) ctx.fillText(d, LPAD + d*(CW+PAD) + CW/2, 11);
+
+  for (let i = 0; i < n; i++) {
+    const y = TOP + i * (CH + PAD);
+    const hl = (i === hlRow);
+    ctx.textAlign = 'right';
+    ctx.font = hl ? 'bold 11px "Segoe UI", system-ui' : '11px "Segoe UI", system-ui';
+    ctx.fillStyle = hl ? '#c0c0d0' : '#444';
+    const lbl = tokens[i].length > 11 ? tokens[i].slice(0, 10) + '…' : tokens[i];
+    ctx.fillText(lbl, LPAD - 6, y + CH/2 + 4);
+
+    for (let d = 0; d < DIM; d++) {
+      const [r, g, b] = valColor(embeddings[i][d]);
+      ctx.fillStyle = `rgba(${r},${g},${b},${hl ? 1 : 0.78})`;
+      ctx.beginPath(); ctx.roundRect(LPAD + d*(CW+PAD), y, CW, CH, 1.5); ctx.fill();
+    }
+    if (hl) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.roundRect(LPAD - 1, y - 1, DIM*(CW+PAD)+1, CH+2, 2); ctx.stroke();
+    }
+  }
+}
+
+function renderAttention(canvas, tokens, simMatrix, hlRow) {
+  const n = tokens.length;
+  const CELL = Math.max(16, Math.min(28, Math.floor(320 / n)));
+  const TLPAD = 80, TTOP = 80;
+  const W = TLPAD + n * CELL + 2;
+  const H = TTOP + n * CELL + 2;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.font = '9px "Segoe UI", system-ui';
+  // Row labels (Y)
+  for (let i = 0; i < n; i++) {
+    ctx.fillStyle = i === hlRow ? '#b0b0c0' : '#3a3a50';
+    ctx.textAlign = 'right';
+    const lbl = tokens[i].length > 9 ? tokens[i].slice(0,8)+'…' : tokens[i];
+    ctx.fillText(lbl, TLPAD - 4, TTOP + i * CELL + CELL/2 + 3);
+  }
+  // Col labels (X) — rotated
+  for (let j = 0; j < n; j++) {
+    ctx.save();
+    ctx.translate(TLPAD + j * CELL + CELL/2, TTOP - 4);
+    ctx.rotate(-Math.PI / 3);
+    ctx.fillStyle = j === hlRow ? '#b0b0c0' : '#3a3a50';
+    ctx.textAlign = 'right';
+    const lbl = tokens[j].length > 9 ? tokens[j].slice(0,8)+'…' : tokens[j];
+    ctx.fillText(lbl, 0, 0);
+    ctx.restore();
+  }
+
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      const v = simMatrix[i][j]; // [-1, 1]
+      const [r, g, b] = valColor(v);
+      const hl = (i === hlRow || j === hlRow);
+      ctx.fillStyle = `rgba(${r},${g},${b},${hl ? 1.0 : 0.75})`;
+      ctx.fillRect(TLPAD + j*CELL + 1, TTOP + i*CELL + 1, CELL-2, CELL-2);
+    }
+  }
+
+  // Highlight row/col borders
+  if (hlRow >= 0 && hlRow < n) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1;
+    ctx.strokeRect(TLPAD + hlRow*CELL, TTOP, CELL, n*CELL);
+    ctx.strokeRect(TLPAD, TTOP + hlRow*CELL, n*CELL, CELL);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DELAUNAY (inline)
+   ══════════════════════════════════════════════════════════════ */
+function orient2(ax,ay,bx,by,cx,cy){return(bx-ax)*(cy-ay)-(by-ay)*(cx-ax);}
+function circumR(ax,ay,bx,by,cx,cy){const dx=bx-ax,dy=by-ay,ex=cx-ax,ey=cy-ay,bl=dx*dx+dy*dy,cl=ex*ex+ey*ey,d=2*(dx*ey-dy*ex);if(Math.abs(d)<1e-10)return Infinity;const x=(ey*bl-dy*cl)/d,y=(dx*cl-ex*bl)/d;return x*x+y*y;}
+function circumC(ax,ay,bx,by,cx,cy){const dx=bx-ax,dy=by-ay,ex=cx-ax,ey=cy-ay,bl=dx*dx+dy*dy,cl=ex*ex+ey*ey,d=2*(dx*ey-dy*ex);return{x:ax+(ey*bl-dy*cl)/d,y:ay+(dx*cl-ex*bl)/d};}
+function delaunay2D(coords) {
+  const n = coords.length >> 1; if (n < 3) return [];
+  const ids = new Uint32Array(n), dists = new Float64Array(n);
+  let mnX=Infinity,mnY=Infinity,mxX=-Infinity,mxY=-Infinity;
+  for(let i=0;i<n;i++){const x=coords[2*i],y=coords[2*i+1];if(x<mnX)mnX=x;if(y<mnY)mnY=y;if(x>mxX)mxX=x;if(y>mxY)mxY=y;}
+  const ccx=(mnX+mxX)/2,ccy=(mnY+mxY)/2;
+  let i0=0,i1=0,i2=0,md=Infinity;
+  for(let i=0;i<n;i++){const d=(coords[2*i]-ccx)**2+(coords[2*i+1]-ccy)**2;if(d<md){i0=i;md=d;}}
+  const i0x=coords[2*i0],i0y=coords[2*i0+1];md=Infinity;
+  for(let i=0;i<n;i++){if(i===i0)continue;const d=(coords[2*i]-i0x)**2+(coords[2*i+1]-i0y)**2;if(d<md&&d>0){i1=i;md=d;}}
+  let i1x=coords[2*i1],i1y=coords[2*i1+1],mr=Infinity;
+  for(let i=0;i<n;i++){if(i===i0||i===i1)continue;const r=circumR(i0x,i0y,i1x,i1y,coords[2*i],coords[2*i+1]);if(r<mr){i2=i;mr=r;}}
+  if(mr===Infinity)return[];
+  let i2x=coords[2*i2],i2y=coords[2*i2+1];
+  if(orient2(i0x,i0y,i1x,i1y,i2x,i2y)<0){let t=i1;i1=i2;i2=t;let tx=i1x;i1x=i2x;i2x=tx;let ty=i1y;i1y=i2y;i2y=ty;}
+  const cen=circumC(i0x,i0y,i1x,i1y,i2x,i2y);
+  for(let i=0;i<n;i++)dists[i]=(coords[2*i]-cen.x)**2+(coords[2*i+1]-cen.y)**2;
+  for(let i=0;i<n;i++)ids[i]=i;
+  ids.sort((a,b)=>dists[a]-dists[b]);
+  const tris=[],hull=[i0,i1,i2];tris.push(i0,i1,i2);
+  for(let k=0;k<n;k++){
+    const i=ids[k];if(i===i0||i===i1||i===i2)continue;
+    const px=coords[2*i],py=coords[2*i+1];
+    let start=-1;
+    for(let j=0;j<hull.length;j++){const a=hull[j],b=hull[(j+1)%hull.length];if(orient2(coords[2*a],coords[2*a+1],coords[2*b],coords[2*b+1],px,py)<0){if(start===-1)start=j;}}
+    if(start===-1)continue;
+    const vis=[];
+    for(let j=0;j<hull.length;j++){const idx=(start+j)%hull.length;const a=hull[idx],b=hull[(idx+1)%hull.length];if(orient2(coords[2*a],coords[2*a+1],coords[2*b],coords[2*b+1],px,py)<0)vis.push(idx);else if(vis.length>0)break;}
+    if(!vis.length)continue;
+    for(const vi of vis)tris.push(i,hull[vi],hull[(vi+1)%hull.length]);
+    hull.splice(vis[0]+1,vis.length-1>=0?vis.length-1:0);hull.splice(vis[0]+1,0,i);
+  }
+  return tris;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   THREE.JS SCENE
+   ══════════════════════════════════════════════════════════════ */
+let scene, camera, renderer, composer, controls, manifoldGroup = null;
+const WS = 5.5;
+
+function initThree() {
+  const cont = document.getElementById('manifold-container');
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x06060c);
+  scene.fog = new THREE.FogExp2(0x06060c, 0.006);
+
+  const W = cont.clientWidth || 600, H = cont.clientHeight || 400;
+  camera = new THREE.PerspectiveCamera(50, W/H, 0.01, 1000);
+  camera.position.set(10, 6, 10);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+  renderer.setSize(W, H); renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.3;
+  cont.appendChild(renderer.domElement);
+
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true; controls.dampingFactor = 0.06;
+  controls.minDistance = 0.1; controls.maxDistance = 500;
+
+  scene.add(new THREE.AmbientLight(0x1a1a2e, 5));
+  const key = new THREE.DirectionalLight(0xffffff, 3.0); key.position.set(15, 22, 12); scene.add(key);
+  const fill = new THREE.DirectionalLight(0x7799cc, 1.3); fill.position.set(-12, 8, -10); scene.add(fill);
+  const rim = new THREE.DirectionalLight(0x4455bb, 0.9); rim.position.set(0, -10, -15); scene.add(rim);
+  const pl = new THREE.PointLight(0x8899ff, 2.0, 120); pl.position.set(0, 25, 0); scene.add(pl);
+
+  // Subtle grid
+  const grid = new THREE.GridHelper(60, 50, 0x0e0e16, 0x0a0a12);
+  grid.position.y = -0.02; scene.add(grid);
+
+  // Axis helpers with labels
+  const axLen = 14, axC = [0xff5555, 0x44ee77, 0x5599ff], axN = ['PC1','PC2','PC3'];
+  const axGrp = new THREE.Group();
+  for (let i = 0; i < 3; i++) {
+    const dir = new THREE.Vector3(); dir.setComponent(i, 1);
+    axGrp.add(new THREE.ArrowHelper(dir, new THREE.Vector3(), axLen, axC[i], 0.8, 0.4));
+    // Sprite label
+    const c2 = document.createElement('canvas'); c2.width=160; c2.height=64;
+    const ctx2 = c2.getContext('2d');
+    ctx2.font = 'bold 36px "Segoe UI", system-ui'; ctx2.textAlign='center'; ctx2.textBaseline='middle';
+    ctx2.fillStyle = '#' + axC[i].toString(16).padStart(6,'0');
+    ctx2.fillText(axN[i], 80, 32);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c2), transparent: true, depthWrite: false }));
+    const pp = new THREE.Vector3(); pp.setComponent(i, axLen + 2);
+    sp.position.copy(pp); sp.scale.set(5, 2, 1);
+    axGrp.add(sp);
+  }
+  scene.add(axGrp);
+
+  composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  composer.addPass(new UnrealBloomPass(new THREE.Vector2(W, H), 0.65, 0.5, 0.72));
+  composer.addPass(new OutputPass());
+
+  new ResizeObserver(() => {
+    const W2 = cont.clientWidth, H2 = cont.clientHeight;
+    if (!W2 || !H2) return;
+    camera.aspect = W2/H2; camera.updateProjectionMatrix();
+    renderer.setSize(W2, H2); composer.setSize(W2, H2);
+  }).observe(cont);
+}
+
+function animate() { requestAnimationFrame(animate); controls.update(); composer.render(); }
+
+/* ── Token sprite label ── */
+function makeTokenSprite(text, hexColor) {
+  const cv = document.createElement('canvas'); cv.width = 320; cv.height = 96;
+  const ctx = cv.getContext('2d');
+  ctx.font = 'bold 38px "Segoe UI", system-ui';
+  const tw = ctx.measureText(text.length > 10 ? text.slice(0,9)+'…' : text).width;
+  const lbl = text.length > 10 ? text.slice(0,9)+'…' : text;
+  ctx.fillStyle = 'rgba(6,6,12,0.78)';
+  ctx.beginPath(); ctx.roundRect((320-tw-20)/2, 10, tw+20, 62, 8); ctx.fill();
+  ctx.fillStyle = '#' + hexColor.toString(16).padStart(6,'0');
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(lbl, 160, 48);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false }));
+  sp.scale.set(3.5, 1.05, 1);
+  return sp;
+}
+
+/* ── Sequence tube path ── */
+function makePathTube(pts3d) {
+  if (pts3d.length < 2) return null;
+  const points = pts3d.map(p => new THREE.Vector3(...p));
+  // Add slight jitter if points are colinear
+  const curve = new THREE.CatmullRomCurve3(points);
+  const geo = new THREE.TubeGeometry(curve, pts3d.length * 5, 0.045, 8, false);
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0x4466cc, emissive: 0x2233aa, emissiveIntensity: 0.7,
+    roughness: 0.2, metalness: 0.15, transparent: true, opacity: 0.85,
+  });
+  return new THREE.Mesh(geo, mat);
+}
+
+/* ── Manifold surface builder ── */
+function buildSurface(pts3d, curvatures, rMin, rMax) {
+  const n = pts3d.length;
+  if (n < 3) return null;
+  const spreads = [0,1,2].map(ax => { const v=pts3d.map(p=>p[ax]); return Math.max(...v)-Math.min(...v); });
+  const axes = [0,1,2].sort((a,b) => spreads[b]-spreads[a]);
+  const a0=axes[0], a1=axes[1];
+  const coords2d = new Float64Array(n*2);
+  for(let i=0;i<n;i++){coords2d[i*2]=pts3d[i][a0];coords2d[i*2+1]=pts3d[i][a1];}
+  const triIdx = delaunay2D(coords2d);
+  if (triIdx.length < 3) return null;
+
+  // Alpha filter
+  const eLens=[];
+  for(let i=0;i<triIdx.length;i+=3)for(const[a,b]of[[triIdx[i],triIdx[i+1]],[triIdx[i+1],triIdx[i+2]],[triIdx[i+2],triIdx[i]]]){const dx=pts3d[a][0]-pts3d[b][0],dy=pts3d[a][1]-pts3d[b][1],dz=pts3d[a][2]-pts3d[b][2];eLens.push(Math.sqrt(dx*dx+dy*dy+dz*dz));}
+  eLens.sort((a,b)=>a-b);
+  const medE=eLens[Math.floor(eLens.length/2)],maxE=medE*5;
+  let tris=[];
+  for(let i=0;i<triIdx.length;i+=3){const i0=triIdx[i],i1=triIdx[i+1],i2=triIdx[i+2];let ok=true;for(const[a,b]of[[i0,i1],[i1,i2],[i2,i0]]){const dx=pts3d[a][0]-pts3d[b][0],dy=pts3d[a][1]-pts3d[b][1],dz=pts3d[a][2]-pts3d[b][2];if(Math.sqrt(dx*dx+dy*dy+dz*dz)>maxE){ok=false;break;}}if(ok)tris.push(i0,i1,i2);}
+  if(tris.length<3)tris=Array.from(triIdx);
+
+  // Midpoint subdivision (1 pass for smooth mesh)
+  const verts = pts3d.map(p => [...p]);
+  let vC = curvatures.slice();
+  const eMap = new Map();
+  const newT = [];
+  const mid = (a, b) => {
+    const key = Math.min(a,b)+'-'+Math.max(a,b);
+    if (eMap.has(key)) return eMap.get(key);
+    const idx = verts.length;
+    verts.push([(verts[a][0]+verts[b][0])/2,(verts[a][1]+verts[b][1])/2,(verts[a][2]+verts[b][2])/2]);
+    vC.push((vC[a]+vC[b])/2);
+    eMap.set(key, idx); return idx;
+  };
+  for (let i=0;i<tris.length;i+=3){const a=tris[i],b=tris[i+1],c=tris[i+2],ab=mid(a,b),bc=mid(b,c),ca=mid(c,a);newT.push(a,ab,ca,ab,b,bc,ca,bc,c,ab,bc,ca);}
+  const finalTris = newT;
+
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(verts.length*3);
+  const col = new Float32Array(verts.length*3);
+  for(let i=0;i<verts.length;i++){pos[i*3]=verts[i][0];pos[i*3+1]=verts[i][1];pos[i*3+2]=verts[i][2];}
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setIndex(finalTris); geo.computeVertexNormals();
+
+  // Displace along normals
+  const nArr = geo.getAttribute('normal').array;
+  const maxSpread = Math.max(...spreads, 1e-10);
+  const range = Math.max(Math.abs(rMin), Math.abs(rMax), 1e-10);
+  for(let i=0;i<verts.length;i++){const d=(Math.abs(vC[i])/range)*maxSpread*0.18;pos[i*3]+=nArr[i*3]*d;pos[i*3+1]+=nArr[i*3+1]*d;pos[i*3+2]+=nArr[i*3+2]*d;}
+  geo.getAttribute('position').needsUpdate=true; geo.computeVertexNormals();
+
+  for(let i=0;i<verts.length;i++){const c=curvColor(vC[i],rMin,rMax);col[i*3]=c.r;col[i*3+1]=c.g;col[i*3+2]=c.b;}
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+
+  const grp = new THREE.Group();
+  grp.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, transparent: true, opacity: 0.80, side: THREE.DoubleSide, roughness: 0.38, metalness: 0.06, depthWrite: false })));
+  grp.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0x223, wireframe: true, transparent: true, opacity: 0.09, depthWrite: false })));
+  return grp;
+}
+
+function updateManifold(tokens, projected, curvatures) {
+  if (manifoldGroup) { scene.remove(manifoldGroup); manifoldGroup.traverse(o => { if(o.geometry)o.geometry.dispose(); if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose()); }); }
+  manifoldGroup = new THREE.Group();
+  const n = tokens.length;
+  const rMin = Math.min(...curvatures), rMax = Math.max(...curvatures);
+  const pts3d = projected.map(p => [p[0]*WS, p[1]*WS, p[2]*WS]);
+
+  // Surface
+  const surf = buildSurface(pts3d, curvatures, rMin, rMax);
+  if (surf) manifoldGroup.add(surf);
+
+  // Token spheres + labels
+  const sGeo = new THREE.SphereGeometry(1, 16, 12);
+  for (let i = 0; i < n; i++) {
+    const col = curvColor(curvatures[i], rMin, rMax);
+    const sphere = new THREE.Mesh(sGeo, new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.45, roughness: 0.3, metalness: 0.1 }));
+    sphere.scale.setScalar(0.2);
+    sphere.position.set(...pts3d[i]);
+    manifoldGroup.add(sphere);
+    const sp = makeTokenSprite(tokens[i], col.getHex());
+    sp.position.set(pts3d[i][0], pts3d[i][1] + 0.55, pts3d[i][2]);
+    manifoldGroup.add(sp);
+  }
+
+  // Sequence tube
+  const tube = makePathTube(pts3d);
+  if (tube) manifoldGroup.add(tube);
+
+  // Sequence order number labels (small)
+  for (let i = 0; i < n; i++) {
+    const cv2 = document.createElement('canvas'); cv2.width=64; cv2.height=64;
+    const ctx2 = cv2.getContext('2d');
+    ctx2.font = 'bold 28px "Segoe UI", system-ui'; ctx2.textAlign='center'; ctx2.textBaseline='middle';
+    ctx2.fillStyle = 'rgba(255,255,255,0.35)'; ctx2.fillText(i+1, 32, 32);
+    const sp2 = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv2), transparent: true, depthWrite: false }));
+    sp2.position.set(pts3d[i][0] + 0.35, pts3d[i][1] - 0.35, pts3d[i][2]);
+    sp2.scale.set(0.8, 0.8, 1);
+    manifoldGroup.add(sp2);
+  }
+
+  scene.add(manifoldGroup);
+
+  // Fit camera
+  const box = new THREE.Box3().setFromObject(manifoldGroup);
+  const ctr = box.getCenter(new THREE.Vector3());
+  const sz = box.getSize(new THREE.Vector3());
+  const d = Math.max(sz.x, sz.y, sz.z, 2);
+  controls.target.copy(ctr);
+  camera.position.set(ctr.x + d*1.3, ctr.y + d*0.75, ctr.z + d*1.3);
+  controls.update();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MAIN PIPELINE
+   ══════════════════════════════════════════════════════════════ */
+let mode = 'word';
+let cachedEmbeddings = null, cachedTokens = null;
+let currentTab = 'embed';
+let hlRow = -1;
+
+function tokenize(text) {
+  if (mode === 'char') return [...text].slice(0, 80);
+  return text.trim().split(/\s+/).filter(t => t.length > 0).slice(0, 60);
+}
+
+function process(text) {
+  const tokens = tokenize(text);
+  document.getElementById('token-count').textContent = tokens.length ? `${tokens.length} token${tokens.length!==1?'s':''}` : '—';
+  const tc = document.getElementById('tensor-canvas');
+  const ac = document.getElementById('attn-canvas');
+  const ph = document.getElementById('placeholder');
+  const sb = document.getElementById('stats-bar');
+
+  if (!tokens.length) {
+    ph.style.display = 'flex'; tc.style.display = 'none'; ac.style.display = 'none'; sb.style.display = 'none';
+    if (manifoldGroup) { scene.remove(manifoldGroup); manifoldGroup = null; }
+    cachedEmbeddings = null; cachedTokens = null;
+    return;
+  }
+
+  const embeddings = computeEmbeddings(tokens);
+  cachedEmbeddings = embeddings; cachedTokens = tokens;
+  const { projected, explainedFrac } = pca3(embeddings);
+  const curvatures = computeCurvature(embeddings, projected);
+  const simMatrix = computeSimilarity(embeddings);
+
+  ph.style.display = 'none';
+  if (currentTab === 'embed') { tc.style.display = 'block'; ac.style.display = 'none'; renderTensor(tc, tokens, embeddings, hlRow); }
+  else { ac.style.display = 'block'; tc.style.display = 'none'; renderAttention(ac, tokens, simMatrix, hlRow); }
+
+  updateManifold(tokens, projected, curvatures);
+
+  const meanR = curvatures.reduce((a,b)=>a+b,0)/curvatures.length;
+  const maxR = Math.max(...curvatures.map(Math.abs));
+  let pathLen = 0;
+  for (let i=1;i<projected.length;i++){const dx=projected[i][0]-projected[i-1][0],dy=projected[i][1]-projected[i-1][1],dz=projected[i][2]-projected[i-1][2];pathLen+=Math.sqrt(dx*dx+dy*dy+dz*dz);}
+  document.getElementById('st-n').textContent = tokens.length;
+  document.getElementById('st-meanR').textContent = meanR.toFixed(4);
+  document.getElementById('st-maxR').textContent = maxR.toFixed(4);
+  document.getElementById('st-path').textContent = (pathLen*WS).toFixed(2);
+  document.getElementById('st-var').textContent = (explainedFrac*100).toFixed(1) + '%';
+  sb.style.display = 'flex';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   INIT + EVENTS
+   ══════════════════════════════════════════════════════════════ */
+initThree(); animate();
+
+// Color scale bar
+const csb = document.getElementById('cscale-bar');
+csb.style.background = 'linear-gradient(to right, #0000ff, #ffff00, #ff0000)';
+
+// Text input (debounced)
+const inp = document.getElementById('text-input');
+let timer;
+inp.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => process(inp.value), 160); });
+
+// Mode toggle
+document.querySelectorAll('.mode-btn').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.mode-btn').forEach(x => x.classList.remove('active'));
+  b.classList.add('active'); mode = b.dataset.mode; process(inp.value);
+}));
+
+// Example buttons
+document.querySelectorAll('.ex-btn').forEach(b => b.addEventListener('click', () => {
+  inp.value = b.dataset.text; process(inp.value);
+}));
+
+// Tab buttons
+document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+  b.classList.add('active'); currentTab = b.dataset.tab;
+  const sd = document.getElementById('scale-desc');
+  if (currentTab === 'embed') {
+    sd.textContent = 'embedding value';
+    csb.style.background = 'linear-gradient(to right, #0000ff, #ffff00, #ff0000)';
+  } else {
+    sd.textContent = 'cosine similarity';
+    csb.style.background = 'linear-gradient(to right, #0000ff, #ffff00, #ff0000)';
+  }
+  if (cachedTokens) process(inp.value);
+}));
+
+// Tooltip + row highlight on tensor canvas hover
+const tip = document.getElementById('tooltip');
+document.getElementById('tensor-canvas').addEventListener('mousemove', e => {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (e.currentTarget.width / (parseFloat(e.currentTarget.style.width)||1) / (Math.min(devicePixelRatio,2)||1));
+  const my = (e.clientY - rect.top)  * (e.currentTarget.height / (parseFloat(e.currentTarget.style.height)||1) / (Math.min(devicePixelRatio,2)||1));
+  const row = Math.floor((my - TOP) / (CH + PAD));
+  const col = Math.floor((mx - LPAD) / (CW + PAD));
+  if (cachedEmbeddings && row >= 0 && row < cachedTokens.length && col >= 0 && col < DIM) {
+    const val = cachedEmbeddings[row][col].toFixed(5);
+    tip.style.display = 'block';
+    tip.style.left = (e.clientX + 14) + 'px'; tip.style.top = (e.clientY - 10) + 'px';
+    tip.innerHTML = `<strong style="color:#bbb">${cachedTokens[row]}</strong><br>dim ${col}: <span style="color:#ddd">${val}</span>`;
+    if (row !== hlRow) { hlRow = row; renderTensor(document.getElementById('tensor-canvas'), cachedTokens, cachedEmbeddings, hlRow); }
+  } else { tip.style.display = 'none'; if (hlRow !== -1) { hlRow = -1; renderTensor(document.getElementById('tensor-canvas'), cachedTokens, cachedEmbeddings, -1); } }
+});
+document.getElementById('tensor-canvas').addEventListener('mouseleave', () => { tip.style.display = 'none'; hlRow = -1; if (cachedTokens) renderTensor(document.getElementById('tensor-canvas'), cachedTokens, cachedEmbeddings, -1); });
+
+// Attention canvas tooltip
+document.getElementById('attn-canvas').addEventListener('mousemove', e => {
+  if (!cachedEmbeddings) return;
+  const n = cachedTokens.length;
+  const CELL = Math.max(16, Math.min(28, Math.floor(320 / n)));
+  const TLPAD = 80, TTOP = 80;
+  const rect = e.currentTarget.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  const row = Math.floor((my - TTOP) / CELL), col = Math.floor((mx - TLPAD) / CELL);
+  if (row >= 0 && row < n && col >= 0 && col < n) {
+    const sim = computeSimilarity(cachedEmbeddings);
+    tip.style.display = 'block';
+    tip.style.left = (e.clientX + 14) + 'px'; tip.style.top = (e.clientY - 10) + 'px';
+    tip.innerHTML = `<strong style="color:#bbb">${cachedTokens[row]}</strong> ↔ <strong style="color:#bbb">${cachedTokens[col]}</strong><br>similarity: <span style="color:#ddd">${sim[row][col].toFixed(4)}</span>`;
+  } else tip.style.display = 'none';
+});
+document.getElementById('attn-canvas').addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+
+// Help overlay
+document.getElementById('help-toggle').addEventListener('click', () => document.getElementById('help-overlay').classList.add('open'));
+document.querySelector('.close-help').addEventListener('click', () => document.getElementById('help-overlay').classList.remove('open'));
+document.getElementById('help-overlay').addEventListener('click', e => { if (e.target === document.getElementById('help-overlay')) document.getElementById('help-overlay').classList.remove('open'); });
+
+// Load example on start
+inp.value = 'the quick brown fox jumps';
+process(inp.value);
+</script>
+</body>
+</html>
