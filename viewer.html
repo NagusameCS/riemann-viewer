@@ -436,23 +436,33 @@ function circumC(ax,ay,bx,by,cx,cy){const dx=bx-ax,dy=by-ay,ex=cx-ax,ey=cy-ay,bl
 /* ═══════════════════════════════════════════════════════════════
    Color
    ═══════════════════════════════════════════════════════════════ */
-// Scalar curvature: blue-white-red diverging (the ONLY colored element)
+// Scalar curvature: blue → yellow → red (signed diverging)
+// R < 0 (hyperbolic/saddle): blue → yellow as |R| grows
+// R > 0 (elliptic/sphere):   yellow → red as R grows
+// R ≈ 0: yellow (neutral)
 function curvColor(R, rMin, rMax) {
   const range = Math.max(Math.abs(rMin), Math.abs(rMax), 1e-10);
-  const t = Math.min(Math.abs(R) / range, 1);
-  if (R < 0) {
-    // negative → blue deepening
-    return new THREE.Color().setHSL(0.6, 0.5 + 0.4*t, 0.85 - 0.45*t);
+  const t = Math.min(Math.abs(R) / range, 1); // 0 = near zero, 1 = extreme
+  if (R <= 0) {
+    // blue (0,0,1) → yellow (1,1,0) as t goes 1→0
+    // interpolate: blue at t=1, yellow at t=0
+    const r = 1.0 - t;           // 0 at extreme negative, 1 at zero
+    const g = 1.0 - t;           // same
+    const b = t;                 // 1 at extreme negative, 0 at zero
+    return new THREE.Color(r, g, b);
   } else {
-    // positive → red deepening
-    return new THREE.Color().setHSL(0.02, 0.5 + 0.4*t, 0.85 - 0.45*t);
+    // yellow (1,1,0) → red (1,0,0) as t goes 0→1
+    const r = 1.0;
+    const g = 1.0 - t;           // 1 at zero, 0 at extreme positive
+    const b = 0.0;
+    return new THREE.Color(r, g, b);
   }
 }
-// Christoffel fallback (when all R≈0): grayscale brightness by norm
+// Christoffel fallback (when all R≈0): yellow-orange gradient by ‖Γ‖
 function christoffelColor(norm, maxNorm) {
   const t = Math.min(norm / Math.max(maxNorm, 1e-10), 1);
-  const l = 0.85 - 0.55*t;
-  return new THREE.Color(l, l, l);
+  // low norm → yellow, high norm → orange-red
+  return new THREE.Color(1.0, 1.0 - 0.7*t, 0.1 - 0.1*t);
 }
 // BW grayscale for non-curvature elements
 function grayColor(i, n) {
@@ -922,15 +932,17 @@ function updateLegend() {
   for (const m of models) { if(m.rMin<gMin)gMin=m.rMin; if(m.rMax>gMax)gMax=m.rMax; }
   el.innerHTML = `
     <h3>Scalar Curvature (R)</h3>
-    <div class="color-bar" style="background:linear-gradient(to right,hsl(216,80%,50%),hsl(216,30%,75%),#d0d0d0,hsl(7,30%,75%),hsl(7,80%,50%))"></div>
-    <div class="color-bar-labels"><span>R &lt; 0 (hyperbolic)</span><span>0</span><span>R &gt; 0 (elliptic)</span></div>
+    <div class="color-bar" style="background:linear-gradient(to right,#0000ff,#ffff00,#ff0000)"></div>
+    <div class="color-bar-labels"><span>R ≪ 0 hyperbolic (saddle)</span><span>R≈0 flat</span><span>R ≫ 0 elliptic (sphere)</span></div>
     <p style="font-size:10px;color:#555;margin-top:2px;">Range: [${gMin.toFixed(2)}, ${gMax.toFixed(4)}]</p>
+    <h3 style="margin-top:10px">PCA Points</h3>
+    <p style="font-size:11px;color:#555">Each dot = one weight tensor (layer) projected from high-dimensional space to 3D via PCA. Position = structural similarity — nearby layers share similar weight geometry.</p>
+    <h3 style="margin-top:10px">Curvature Surface</h3>
+    <p style="font-size:11px;color:#555">Triangulated mesh through the curvature sample points. Color = scalar curvature R at that location. Height = displaced by R magnitude. This is the actual Riemannian manifold shape.</p>
     <h3 style="margin-top:10px">Point Size</h3>
     <p style="font-size:11px;color:#555">∝ Christoffel connection norm ‖Γ‖</p>
     <h3 style="margin-top:10px">Ellipsoids</h3>
-    <p style="font-size:11px;color:#555">Axes = √g<sub>ii</sub> (metric tensor diagonal)</p>
-    <h3 style="margin-top:10px">Colors</h3>
-    <p style="font-size:11px;color:#555">Only the curvature surface/field uses color. Everything else is grayscale.</p>`;
+    <p style="font-size:11px;color:#555">Axes = √g<sub>ii</sub> (metric tensor diagonal) — shows local distance stretching</p>`;
 }
 
 function updateStats() {
