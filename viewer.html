@@ -307,10 +307,17 @@ function quicksortIds(ids, dists, left, right) {
   ids.sort((a,b) => dists[a]-dists[b]);
 }
 
-/* Build surface mesh from curvature points via Delaunay */
+/* Build surface mesh from curvature points via Delaunay + subdivision */
 function buildSurface(curvPts, cx, cy, cz, rMin, rMax, modelColor) {
   if (curvPts.length < 3) return null;
   const pts = curvPts.map(p => [p.pos[0]-cx, p.pos[1]-cy, p.pos[2]-cz]);
+  const Rs = curvPts.map(p => p.R);
+  const norms = curvPts.map(p => p.christoffel_norm || 0);
+  const maxNorm = Math.max(...norms, 1e-10);
+
+  // Determine if curvature is degenerate (all R ≈ same value)
+  const rRange = Math.abs(rMax - rMin);
+  const useChristoffel = rRange < 1e-8; // fallback to ‖Γ‖ coloring
 
   // Pick 2 axes with greatest spread for triangulation projection
   const spreads = [0,1,2].map(ax => {
@@ -318,7 +325,7 @@ function buildSurface(curvPts, cx, cy, cz, rMin, rMax, modelColor) {
     return Math.max(...vals) - Math.min(...vals);
   });
   const axes = [0,1,2].sort((a,b) => spreads[b]-spreads[a]);
-  const a0 = axes[0], a1 = axes[1]; // 2 axes with most spread
+  const a0 = axes[0], a1 = axes[1], a2 = axes[2]; // height axis = least spread
 
   // Flatten to 2D for Delaunay
   const coords2d = new Float64Array(pts.length * 2);
@@ -330,20 +337,19 @@ function buildSurface(curvPts, cx, cy, cz, rMin, rMax, modelColor) {
   const triIndices = delaunay2D(coords2d);
   if (triIndices.length < 3) return null;
 
-  // Filter out overly long triangles (alpha shape — remove triangles with edges > median * 3)
+  // Gentle alpha filter: only remove edges > 6x median
   const edgeLens = [];
   for (let i = 0; i < triIndices.length; i += 3) {
-    const i0 = triIndices[i], i1 = triIndices[i+1], i2 = triIndices[i+2];
-    for (const [a,b] of [[i0,i1],[i1,i2],[i2,i0]]) {
+    for (const [a,b] of [[triIndices[i],triIndices[i+1]],[triIndices[i+1],triIndices[i+2]],[triIndices[i+2],triIndices[i]]]) {
       const dx=pts[a][0]-pts[b][0], dy=pts[a][1]-pts[b][1], dz=pts[a][2]-pts[b][2];
       edgeLens.push(Math.sqrt(dx*dx+dy*dy+dz*dz));
     }
   }
   edgeLens.sort((a,b) => a-b);
   const medianEdge = edgeLens[Math.floor(edgeLens.length/2)];
-  const maxEdge = medianEdge * 3.5;
+  const maxEdge = medianEdge * 6;
 
-  const filteredTris = [];
+  let tris = [];
   for (let i = 0; i < triIndices.length; i += 3) {
     const i0 = triIndices[i], i1 = triIndices[i+1], i2 = triIndices[i+2];
     let ok = true;
@@ -351,39 +357,93 @@ function buildSurface(curvPts, cx, cy, cz, rMin, rMax, modelColor) {
       const dx=pts[a][0]-pts[b][0], dy=pts[a][1]-pts[b][1], dz=pts[a][2]-pts[b][2];
       if (Math.sqrt(dx*dx+dy*dy+dz*dz) > maxEdge) { ok = false; break; }
     }
-    if (ok) filteredTris.push(i0, i1, i2);
+    if (ok) tris.push(i0, i1, i2);
   }
-  if (filteredTris.length < 3) return null;
+  if (tris.length < 3) tris = Array.from(triIndices); // fallback: keep all
 
-  // Build geometry
+  // Midpoint subdivision (2 iterations → ~4x triangles each → smooth mesh)
+  let verts = pts.map(p => [...p]);
+  let vR = Rs.slice();
+  let vNorm = norms.slice();
+
+  for (let iter = 0; iter < 2; iter++) {
+    const newTris = [];
+    const edgeMap = new Map();
+    function mid(a, b) {
+      const key = Math.min(a,b) + '-' + Math.max(a,b);
+      if (edgeMap.has(key)) return edgeMap.get(key);
+      const idx = verts.length;
+      verts.push([(verts[a][0]+verts[b][0])/2, (verts[a][1]+verts[b][1])/2, (verts[a][2]+verts[b][2])/2]);
+      vR.push((vR[a]+vR[b])/2);
+      vNorm.push((vNorm[a]+vNorm[b])/2);
+      edgeMap.set(key, idx);
+      return idx;
+    }
+    for (let i = 0; i < tris.length; i += 3) {
+      const a = tris[i], b = tris[i+1], c = tris[i+2];
+      const ab = mid(a,b), bc = mid(b,c), ca = mid(c,a);
+      newTris.push(a,ab,ca, ab,b,bc, ca,bc,c, ab,bc,ca);
+    }
+    tris = newTris;
+  }
+
+  // Displace vertices along surface normal by curvature to create 3D shape
+  // First build geometry to get normals
   const geo = new THREE.BufferGeometry();
-  const positions = new Float32Array(pts.length * 3);
-  const colors = new Float32Array(pts.length * 3);
-  const normals = new Float32Array(pts.length * 3);
+  const positions = new Float32Array(verts.length * 3);
+  const colors = new Float32Array(verts.length * 3);
 
-  for (let i = 0; i < pts.length; i++) {
-    positions[i*3] = pts[i][0]; positions[i*3+1] = pts[i][1]; positions[i*3+2] = pts[i][2];
-    const c = curvColor(curvPts[i].R, rMin, rMax);
-    colors[i*3] = c.r; colors[i*3+1] = c.g; colors[i*3+2] = c.b;
+  for (let i = 0; i < verts.length; i++) {
+    positions[i*3] = verts[i][0]; positions[i*3+1] = verts[i][1]; positions[i*3+2] = verts[i][2];
   }
   geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-  geo.setIndex(filteredTris);
+  geo.setIndex(tris);
   geo.computeVertexNormals();
+
+  // Displace along normals by curvature (or christoffel norm if R is flat)
+  const normArr = geo.getAttribute('normal').array;
+  const maxSpread = Math.max(...spreads);
+  const dispScale = maxSpread * 0.15; // displacement magnitude relative to mesh size
+
+  for (let i = 0; i < verts.length; i++) {
+    let disp;
+    if (useChristoffel) {
+      disp = (vNorm[i] / maxNorm) * dispScale;
+    } else {
+      // Normalize R to [-1, 1] range, then scale
+      const absMax = Math.max(Math.abs(rMin), Math.abs(rMax));
+      disp = (vR[i] / absMax) * dispScale;
+    }
+    positions[i*3]   += normArr[i*3]   * disp;
+    positions[i*3+1] += normArr[i*3+1] * disp;
+    positions[i*3+2] += normArr[i*3+2] * disp;
+  }
+  geo.getAttribute('position').needsUpdate = true;
+  geo.computeVertexNormals(); // recompute after displacement
+
+  // Color vertices
+  for (let i = 0; i < verts.length; i++) {
+    const c = useChristoffel
+      ? christoffelColor(vNorm[i], maxNorm)
+      : curvColor(vR[i], rMin, rMax);
+    colors[i*3] = c.r; colors[i*3+1] = c.g; colors[i*3+2] = c.b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
   const surfaceGroup = new THREE.Group();
   surfaceGroup.userData.layer = 'surface';
 
-  // Filled surface
+  // Filled surface — higher opacity, smooth shading
   const surfMat = new THREE.MeshPhongMaterial({
-    vertexColors: true, transparent: true, opacity: 0.55,
-    side: THREE.DoubleSide, shininess: 60, depthWrite: false,
+    vertexColors: true, transparent: true, opacity: 0.72,
+    side: THREE.DoubleSide, shininess: 80, depthWrite: false,
+    flatShading: false,
   });
   surfaceGroup.add(new THREE.Mesh(geo, surfMat));
 
   // Wireframe overlay
   const wireMat = new THREE.MeshBasicMaterial({
-    color: modelColor, wireframe: true, transparent: true, opacity: 0.12, depthWrite: false,
+    color: modelColor, wireframe: true, transparent: true, opacity: 0.06, depthWrite: false,
   });
   const wireMesh = new THREE.Mesh(geo, wireMat);
   wireMesh.userData.isWireframe = true;
@@ -448,11 +508,22 @@ function animate() { requestAnimationFrame(animate); controls.update(); renderer
 
 /* ═══ Color ═══ */
 function curvColor(R, rMin, rMax) {
-  const range = Math.max(Math.abs(rMin), Math.abs(rMax), 1e-6);
+  const range = Math.max(Math.abs(rMin), Math.abs(rMax), 1e-10);
   const t = Math.min(Math.abs(R) / range, 1);
-  return R < 0
-    ? new THREE.Color().setHSL(0.55 + 0.1 * (1 - t), 0.8, 0.3 + 0.5 * t)
-    : new THREE.Color().setHSL(0.08 - 0.08 * t, 0.9, 0.3 + 0.4 * t);
+  if (R < 0) {
+    // Negative curvature: neutral teal → deep blue
+    return new THREE.Color().setHSL(0.58 + 0.05 * t, 0.5 + 0.4 * t, 0.7 - 0.35 * t);
+  } else {
+    // Positive curvature: neutral warm → deep red/orange
+    return new THREE.Color().setHSL(0.08 - 0.06 * t, 0.5 + 0.4 * t, 0.7 - 0.35 * t);
+  }
+  // R=0 → t=0 → HSL(~0.58 or 0.08, 0.5, 0.7) = desaturated light teal/warm
+}
+
+/* ═══ Surface color for Christoffel norm (fallback when all R≈0) ═══ */
+function christoffelColor(norm, maxNorm) {
+  const t = Math.min(norm / Math.max(maxNorm, 1e-10), 1);
+  return new THREE.Color().setHSL(0.58 - 0.50 * t, 0.6 + 0.3 * t, 0.7 - 0.3 * t);
 }
 
 /* ═══ Add model ═══ */
