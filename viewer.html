@@ -387,7 +387,7 @@ function buildSurface(curvPts, cx, cy, cz, rMin, rMax, modelColor) {
   });
   const wireMesh = new THREE.Mesh(geo, wireMat);
   wireMesh.userData.isWireframe = true;
-  surfaceGroup.add(wireMesh);", "oldString": "  wireMesh.userData.isWireframe = true;\n  wireMesh.visible = false;\n  surfaceGroup.add(wireMesh);
+  surfaceGroup.add(wireMesh);
 
   return surfaceGroup;
 }
